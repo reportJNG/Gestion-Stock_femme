@@ -1,0 +1,356 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+:root {
+  /* ───────────────── Core (cream base) ───────────────── */
+  --background:         42 60% 97%;
+  --foreground:         345 35% 12%;
+
+  --card:               0 0% 100%;
+  --card-foreground:    345 35% 12%;
+
+  --popover:            0 0% 100%;
+  --popover-foreground: 345 35% 12%;
+
+  /* ───────────────── Brand ───────────────── */
+  --primary:            346 75% 55%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary:          346 40% 94%;
+  --secondary-foreground: 346 45% 25%;
+
+  --muted:              42 25% 94%;
+  --muted-foreground:   346 18% 48%;
+
+  --accent:             346 60% 92%;
+  --accent-foreground:  346 55% 28%;
+
+  /* ───────────────── Semantic ───────────────── */
+  --destructive:        0 84% 56%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success:            150 60% 40%;
+  --success-foreground: 0 0% 100%;
+
+  --warning:            38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+
+  /* ───────────────── Borders ───────────────── */
+  --border:             42 25% 88%;
+  --input:              42 25% 90%;
+  --ring:               346 75% 55%;
+
+  /* ───────────────── Rosie System ───────────────── */
+  --rose:               346 75% 55%;
+  --rose-soft:          346 60% 70%;
+  --rose-glow:          346 82% 85%;
+  --rose-light:         346 85% 96%;
+  --rose-ink:           346 45% 16%;
+  --rose-dark:          346 55% 28%;
+  --rose-pearl:         42 40% 94%;
+
+  /* ───────────────── Extras ───────────────── */
+  --brand-muted:        346 45% 92%;
+  --brand-subtle:       42 55% 97%;
+  --blush:              346 70% 96%;
+  --black-rose:         345 38% 8%;
+
+  /* ───────────────── Shadows ───────────────── */
+  --shadow-sm: 0 1px 3px hsl(346 75% 55% / 0.10);
+  --shadow-md: 0 4px 12px hsl(346 75% 55% / 0.12);
+  --shadow-lg: 0 8px 28px hsl(346 75% 55% / 0.14);
+  --shadow-xl: 0 16px 48px hsl(346 75% 55% / 0.16);
+
+  /* ───────────────── Radius ───────────────── */
+  --radius: 1rem;
+}
+  /*
+   * ✨ DARK MODE — girlie, luxurious, rose‑drenched ✨
+   *
+   * No cold grey, no muddy charcoal.
+   * Surfaces are rich warm magenta‑black, accents pop with
+   * juicy berry & fuchsia, and soft pink glows tie everything together.
+   */
+.dark {
+  /* ─── Core (pure clean black UI) ─── */
+  --background:         0 0% 3%;
+  --foreground:         345 75% 70%;
+
+  --card:               0 0% 5%;
+  --card-foreground:    345 70% 68%;
+
+  --popover:            0 0% 5%;
+  --popover-foreground: 345 70% 68%;
+
+  /* ─── Brand (same rosie identity, darker context) ─── */
+  --primary:            345 75% 65%;
+  --primary-foreground: 0 0% 3%;
+
+  --secondary:          0 0% 7%;
+  --secondary-foreground: 345 55% 72%;
+
+  --muted:              0 0% 6%;
+  --muted-foreground:   345 35% 60%;
+
+  --accent:             0 0% 8%;
+  --accent-foreground:  345 65% 75%;
+
+  /* ─── Semantic (kept neutral, no visual noise) ─── */
+  --destructive:        0 70% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success:            150 45% 45%;
+  --success-foreground: 0 0% 100%;
+
+  --warning:            38 85% 55%;
+  --warning-foreground: 0 0% 100%;
+
+  /* ─── Borders (barely visible like root system) ─── */
+  --border:             0 0% 10%;
+  --input:              0 0% 8%;
+  --ring:               345 75% 65%;
+
+  /* ─── Rose system (same identity, inverted brightness) ─── */
+  --rose:               345 75% 65%;
+  --rose-soft:          345 60% 70%;
+  --rose-glow:          345 85% 75%;
+  --rose-ink:           0 0% 98%;
+  --rose-muted:         345 35% 55%;
+
+  /* ─── Radius (identical for seamless switching) ─── */
+  --radius: 1rem;
+}
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 60% 40% at 8% 0%,  hsl(var(--rose-glow) / 0.45) 0%, transparent 100%),
+      radial-gradient(ellipse 40% 25% at 92% 0%, hsl(var(--rose) / 0.08) 0%, transparent 100%),
+      hsl(var(--background));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  .dark body {
+    background:
+      radial-gradient(ellipse 55% 35% at 10% 0%, hsl(var(--rose) / 0.28) 0%, transparent 100%),
+      radial-gradient(ellipse 35% 20% at 90% 0%, hsl(var(--rose-glow) / 0.16) 0%, transparent 100%),
+      hsl(var(--background));
+  }
+
+  ::selection {
+    background: hsl(var(--rose-glow) / 0.55);
+    color: hsl(var(--rose-ink));
+  }
+
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: hsl(var(--muted)); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--rose-pearl)); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--rose-soft)); }
+}
+
+@layer components {
+
+  /* ─── Layout ─── */
+  .page-shell {
+    @apply space-y-6 md:space-y-7;
+  }
+
+  /* ─── Cards ─── */
+  .luxe-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-md);
+  }
+
+  .luxe-card-hover {
+    @apply transition-all duration-200;
+  }
+  .luxe-card-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* ─── Glass panels ─── */
+  .luxe-panel {
+    background: hsl(var(--card) / 0.85);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  /* ─── Toolbar ─── */
+  .rose-toolbar {
+    @apply rounded-2xl p-3 backdrop-blur-lg;
+    background: hsl(var(--card) / 0.88);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* ─── Table surface ─── */
+  .table-surface {
+    @apply overflow-hidden rounded-2xl;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ─── Empty state ─── */
+  .rose-empty-state {
+    @apply flex flex-col items-center justify-center rounded-3xl px-6 py-14 text-center;
+    background: hsl(var(--muted) / 0.5);
+    border: 1.5px dashed hsl(var(--border));
+  }
+
+  .rose-empty-state-icon {
+    @apply mb-4 flex h-16 w-16 items-center justify-center rounded-2xl;
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+  }
+
+  /* ─── Hero ─── */
+  .rose-page-hero {
+    @apply relative overflow-hidden rounded-3xl p-5 sm:p-6;
+    background: linear-gradient(
+      140deg,
+      hsl(var(--rose-light))        0%,
+      hsl(var(--brand-subtle))     55%,
+      hsl(var(--accent) / 0.55)   100%
+    );
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-lg);
+  }
+
+  .dark .rose-page-hero {
+    background: linear-gradient(
+      140deg,
+      hsl(var(--brand-subtle))      0%,
+      hsl(var(--card))             55%,
+      hsl(var(--accent) / 0.60)   100%
+    );
+  }
+
+  .rose-page-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 50% 80% at 10% 50%,
+      hsl(var(--rose-glow) / 0.28) 0%,
+      transparent 70%
+    );
+  }
+
+  /* ─── Stat cards ─── */
+  .boutique-stat {
+    @apply relative overflow-hidden rounded-3xl border p-4 transition-all duration-200;
+    background: hsl(var(--card));
+    border-color: hsl(var(--border));
+    box-shadow: var(--shadow-sm);
+  }
+  .boutique-stat:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ─── Glow icon ─── */
+  .rose-glow-icon {
+    @apply flex items-center justify-center rounded-2xl;
+    background: hsl(var(--accent));
+    color: hsl(var(--primary));
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ─── Dividers ─── */
+  .soft-divider {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--rose-soft) / 0.45),
+      transparent
+    );
+  }
+  .soft-divider-vertical {
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      hsl(var(--rose-soft) / 0.45),
+      transparent
+    );
+  }
+
+  /* ─── Badges ─── */
+  .rose-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+    border: 1px solid hsl(var(--rose) / 0.2);
+  }
+
+  /* ─── Glass inputs ─── */
+  .glass-input {
+    @apply rounded-xl border bg-card/60 backdrop-blur-sm transition-all duration-200;
+    border-color: hsl(var(--border));
+  }
+  .glass-input:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--rose-glow) / 0.30);
+  }
+
+  /* ─── Shimmer ─── */
+  .shimmer-bg {
+    background: linear-gradient(
+      110deg,
+      hsl(var(--muted))          30%,
+      hsl(var(--accent) / 0.45) 50%,
+      hsl(var(--muted))          70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2.2s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ─── Print ─── */
+  .print-only { display: none; }
+
+  @media print {
+    .print-only { display: block; }
+    .no-print   { display: none; }
+  }
+}
+
+/* ─── Barcode label print ─── */
+@media print {
+  @page { size: 50mm 30mm; margin: 0; }
+
+  body * { visibility: hidden; }
+
+  .print-area,
+  .print-area * { visibility: visible; }
+
+  .print-area {
+    position: absolute;
+    left: 0; top: 0;
+    width: 50mm; height: 30mm;
+  }
+}
