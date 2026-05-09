@@ -2,8 +2,6 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import {addOfflineSale, getCachedVariantByBarcode, decrementCachedVariantStock } from '@/lib/offline/db';
-import { useNetworkStatus } from './useNetworkStatus';
 
 export type ScanResult = {
   success: boolean;
@@ -15,12 +13,10 @@ export type ScanResult = {
   price_ttc?: number;
   error?: string;
   message?: string;
-  offline?: boolean;
 };
 
 export function useScanner() {
   const supabase = createClient();
-  const isOnline = useNetworkStatus();
   const queryClient = useQueryClient();
 
   const scanMutation = useMutation({
@@ -33,46 +29,17 @@ export function useScanner() {
       customerName?: string;
       soldBy?: string;
     }): Promise<ScanResult> => {
-      if (isOnline) {
-        const { data, error } = await supabase.rpc('sell_by_barcode', {
-          p_barcode: barcode,
-          p_customer_name: customerName || null,
-          p_sold_by: soldBy || null,
-        });
+      const { data, error } = await supabase.rpc('sell_by_barcode', {
+        p_barcode: barcode,
+        p_customer_name: customerName || null,
+        p_sold_by: soldBy || null,
+      });
 
-        if (error) {
-          return { success: false, error: error.message };
-        }
-
-        const result = data as ScanResult;
-        return result;
-      } else {
-        const cached = await getCachedVariantByBarcode(barcode);
-        if (!cached) {
-          return { success: false, error: 'CODE_INTROUVABLE', message: 'Code-barres non trouve dans le cache' };
-        }
-
-        if (cached.quantity < 1) {
-          return { success: false, error: 'STOCK_EPUISE', message: 'Stock epuise' };
-        }
-
-        await decrementCachedVariantStock(barcode);
-        await addOfflineSale({
-          barcode,
-          customerName,
-          soldBy,
-          createdAt: new Date(),
-        });
-
-        return {
-          success: true,
-          offline: true,
-          product_name: cached.productName,
-          color: cached.colorName,
-          size: cached.size,
-          price_ttc: cached.salePrice * (1 + cached.tvaRate / 100),
-        };
+      if (error) {
+        return { success: false, error: error.message };
       }
+
+      return data as ScanResult;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
