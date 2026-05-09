@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, ClipboardList, ScanLine,
-  Receipt, BarChart3, Archive, Settings, LogOut,
+  Receipt, BarChart3, Archive, Settings, LogOut,Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/ventes',          label: 'Ventes',            icon: Receipt,          roles: ['admin', 'worker'] },
   { href: '/rapports',        label: 'Rapports',          icon: BarChart3,        roles: ['admin'] },
   { href: '/archives',        label: 'Archives',          icon: Archive,          roles: ['admin'] },
+  { href: '/travailleurs',    label: 'Travailleurs',      icon: Users,            roles: ['admin'] }, 
   { href: '/parametres',      label: 'Paramètres',        icon: Settings,         roles: ['admin'] },
 ];
 
