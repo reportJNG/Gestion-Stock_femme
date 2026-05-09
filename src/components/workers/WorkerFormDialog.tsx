@@ -5,29 +5,21 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
+  Form, FormControl, FormField, FormItem,
+  FormLabel, FormMessage, FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { UserPlus, Pencil, Loader2, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import {
+  UserPlus, Pencil, Loader2, Eye, EyeOff, AlertTriangle,
+} from "lucide-react";
 import type { Worker, WorkerFormData, WorkerUpdateData } from "@/hooks/useWorkers";
 import { useCreateWorker, useUpdateWorker } from "@/hooks/useWorkers";
 
@@ -60,12 +52,7 @@ interface WorkerFormDialogProps {
 }
 
 export function WorkerFormDialog({
-  mode,
-  worker,
-  trigger,
-  open: controlledOpen,
-  onOpenChange,
-  onSuccess,
+  mode, worker, trigger, open: controlledOpen, onOpenChange, onSuccess,
 }: WorkerFormDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -86,14 +73,7 @@ export function WorkerFormDialog({
           commission_rate: worker?.commission_rate || 0,
           is_active: worker?.is_active ?? true,
         }
-      : {
-          email: "",
-          password: "",
-          full_name: "",
-          phone: "",
-          commission_rate: 0,
-          is_active: true,
-        },
+      : { email: "", password: "", full_name: "", phone: "", commission_rate: 0, is_active: true },
   });
 
   useEffect(() => {
@@ -114,10 +94,7 @@ export function WorkerFormDialog({
     try {
       setError(null);
       if (isEdit && worker) {
-        await updateWorker.mutateAsync({
-          id: worker.id,
-          ...values,
-        } as WorkerUpdateData);
+        await updateWorker.mutateAsync({ id: worker.id, ...values } as WorkerUpdateData);
       } else {
         await createWorker.mutateAsync({
           ...values,
@@ -128,11 +105,7 @@ export function WorkerFormDialog({
       setOpen(false);
       onSuccess?.();
     } catch (err: any) {
-      setError(
-        err?.response?.data?.message ||
-        err?.message ||
-        "Une erreur est survenue"
-      );
+      setError(err?.response?.data?.message || err?.message || "Une erreur est survenue");
     }
   }
 
@@ -140,171 +113,210 @@ export function WorkerFormDialog({
     <Dialog
       open={open}
       onOpenChange={(newOpen) => {
-        if (!isPending) {
-          setError(null);
-          setOpen(newOpen);
-        }
+        if (!isPending) { setError(null); setOpen(newOpen); }
       }}
     >
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto gap-0 p-0">
-        <DialogHeader className="p-6 pb-4">
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-            {isEdit ? (
-              <>
-                <Pencil className="h-5 w-5 text-primary" />
-                Modifier le travailleur
-              </>
-            ) : (
-              <>
-                <UserPlus className="h-5 w-5 text-primary" />
-                Nouveau travailleur
-              </>
-            )}
+
+      <DialogContent className="w-full max-w-lg mx-auto max-h-[92dvh] flex flex-col gap-0 p-0 overflow-hidden rounded-2xl">
+        {/* Header */}
+        <DialogHeader className="px-5 pt-5 pb-4 shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+            {isEdit
+              ? <><Pencil className="h-4 w-4 text-primary" /> Modifier le travailleur</>
+              : <><UserPlus className="h-4 w-4 text-primary" /> Nouveau travailleur</>}
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
+          <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
             {isEdit
               ? "Modifiez les informations du travailleur ci-dessous."
               : "Créez un nouveau compte travailleur avec accès au scanner de vente."}
           </DialogDescription>
         </DialogHeader>
 
-        <Separator />
+        <Separator className="shrink-0" />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 p-6">
-            {error && (
-              <Alert variant="destructive" className="rounded-xl">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <FormField
-              control={form.control}
-              name="full_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom complet *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Ahmed Benali" {...field} className="glass-input" autoComplete="name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} id="worker-form" className="px-5 py-5 space-y-4">
+              {error && (
+                <Alert variant="destructive" className="rounded-xl py-3">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <AlertDescription className="text-sm">{error}</AlertDescription>
+                </Alert>
               )}
-            />
 
-            {!isEdit && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Adresse email *</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="worker@example.com" {...field} className="glass-input" autoComplete="email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mot de passe temporaire *</FormLabel>
-                      <FormControl>
-                        <div className="relative">
+              {/* Full name */}
+              <FormField
+                control={form.control}
+                name="full_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Nom complet <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ex: Ahmed Benali"
+                        {...field}
+                        className="h-10 rounded-xl bg-muted/40 border-muted-foreground/15 focus:bg-background text-sm"
+                        autoComplete="name"
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              {/* Email + Password (create only) */}
+              {!isEdit && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Adresse email <span className="text-destructive">*</span></FormLabel>
+                        <FormControl>
                           <Input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Min. 6 caractères"
+                            type="email"
+                            placeholder="worker@example.com"
                             {...field}
-                            className="glass-input pr-10"
-                            autoComplete="new-password"
+                            className="h-10 rounded-xl bg-muted/40 border-muted-foreground/15 focus:bg-background text-sm"
+                            autoComplete="email"
                           />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground"
-                          >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormDescription className="text-xs">
-                        Le travailleur devra changer ce mot de passe lors de sa première connexion.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
-
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Téléphone</FormLabel>
-                  <FormControl>
-                    <Input type="tel" placeholder="+213 5XX XXX XXX" {...field} value={field.value || ""} className="glass-input" autoComplete="tel" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Mot de passe temporaire <span className="text-destructive">*</span></FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Min. 6 caractères"
+                              {...field}
+                              className="h-10 rounded-xl bg-muted/40 border-muted-foreground/15 focus:bg-background text-sm pr-10"
+                              autoComplete="new-password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormDescription className="text-xs text-muted-foreground">
+                          Le travailleur devra changer ce mot de passe lors de sa première connexion.
+                        </FormDescription>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                </>
               )}
-            />
 
-            <FormField
-              control={form.control}
-              name="commission_rate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Taux de commission (%)</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={0} max={100} step={0.5} placeholder="0" {...field} className="glass-input" />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Pourcentage de commission sur les ventes réalisées (0-100%).
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Phone */}
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Téléphone</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        placeholder="+213 5XX XXX XXX"
+                        {...field}
+                        value={field.value || ""}
+                        className="h-10 rounded-xl bg-muted/40 border-muted-foreground/15 focus:bg-background text-sm"
+                        autoComplete="tel"
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="is_active"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-xl border p-4 bg-muted/30">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-sm font-medium">Compte actif</FormLabel>
-                    <FormDescription className="text-xs">
-                      Désactivez pour empêcher l'accès sans supprimer le compte.
+              {/* Commission rate */}
+              <FormField
+                control={form.control}
+                name="commission_rate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Taux de commission (%)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.5}
+                        placeholder="0"
+                        {...field}
+                        className="h-10 rounded-xl bg-muted/40 border-muted-foreground/15 focus:bg-background text-sm"
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs text-muted-foreground">
+                      Pourcentage appliqué sur les ventes réalisées (0–100 %).
                     </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
 
-            <DialogFooter className="pt-2 gap-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending} className="rounded-xl">
-                Annuler
-              </Button>
-              <Button type="submit" disabled={isPending || (isEdit && !form.formState.isDirty)} className="rounded-xl gap-2">
-                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isPending ? "Enregistrement..." : isEdit ? "Enregistrer" : "Créer le travailleur"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              {/* Active toggle */}
+              <FormField
+                control={form.control}
+                name="is_active"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-xl border border-border/60 bg-muted/30 px-4 py-3.5 gap-4">
+                    <div className="space-y-0.5 flex-1 min-w-0">
+                      <FormLabel className="text-sm font-medium leading-none">Compte actif</FormLabel>
+                      <FormDescription className="text-xs text-muted-foreground leading-relaxed">
+                        Désactivez pour bloquer l'accès sans supprimer le compte.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </form>
+          </Form>
+        </div>
+
+        <Separator className="shrink-0" />
+
+        {/* Footer */}
+        <DialogFooter className="px-5 py-4 flex-row gap-2 shrink-0 sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isPending}
+            className="flex-1 sm:flex-none rounded-xl h-10 text-sm"
+          >
+            Annuler
+          </Button>
+          <Button
+            type="submit"
+            form="worker-form"
+            disabled={isPending || (isEdit && !form.formState.isDirty)}
+            className="flex-1 sm:flex-none rounded-xl h-10 text-sm gap-2"
+          >
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isPending
+              ? "Enregistrement..."
+              : isEdit ? "Enregistrer" : "Créer le travailleur"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
