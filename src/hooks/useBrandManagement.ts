@@ -1,10 +1,12 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
+
+
 
 export function useBrandManagement() {
-  const supabase = createClient();
+const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
   const createBrand = useMutation({

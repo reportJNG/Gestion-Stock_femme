@@ -1,5 +1,6 @@
-import { createClient } from '@/lib/supabase/client';
 import { getPendingSales, getPendingStockIns, markSaleSynced, markStockInSynced, ensureDBConnection } from './db';
+import { supabaseClient } from '@/lib/supabase/client';
+
 
 // ✅ NEW: Helper to check online status
 function isOnline(): boolean {
@@ -45,7 +46,7 @@ export async function syncPendingSales(): Promise<{ success: number; errors: num
     return { success: 0, errors: 0 };
   }
 
-  const supabase = createClient();
+const supabase = supabaseClient;
   const pending = await getPendingSales();
   let success = 0;
   let errors = 0;
@@ -94,7 +95,7 @@ export async function syncPendingStockIns(): Promise<{ success: number; errors: 
     return { success: 0, errors: 0 };
   }
 
-  const supabase = createClient();
+const supabase = supabaseClient;
   const pending = await getPendingStockIns();
   let success = 0;
   let errors = 0;

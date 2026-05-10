@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useScanner, type ScanResult } from '@/hooks/useScanner';
@@ -7,7 +7,8 @@ import { ManualBarcodeInput } from '@/components/scanner/ManualBarcodeInput';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Camera, History, ScanLine, CheckCircle2, AlertCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
+
 
 // ─── Dynamic import ────────────────────────────────────────────────────────────
 
@@ -141,7 +142,7 @@ export default function ScannerPage() {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
+const supabase = supabaseClient;
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
     });

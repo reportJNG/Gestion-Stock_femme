@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
 import { useVariants } from '@/hooks/useVariants';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,7 +17,7 @@ type ArchivedProduct = {
 };
 
 export default function ArchivesPage() {
-  const supabase = createClient();
+const supabase = supabaseClient;
   const { unarchiveVariant } = useVariants();
 
   const { data: archivedProducts = [], isLoading } = useQuery({

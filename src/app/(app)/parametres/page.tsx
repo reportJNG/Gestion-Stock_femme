@@ -2,27 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { useSettings } from '@/hooks/useSettings';
-import { useAuth } from '@/hooks/useAuth';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
   Store,
   AlertTriangle,
   Percent,
-  Wifi,
   LogOut,
-  RefreshCw,
   Moon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { cn } from '@/lib/utils';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -64,8 +59,6 @@ export default function SettingsPage() {
   const { logout } = useAuth();
   const { settings, isLoading, updateSetting } = useSettings();
   const { theme, setTheme } = useTheme();
-  const { pendingCount, isSyncing, sync } = useOfflineSync();
-
   const [shopName, setShopName] = useState('');
   const [threshold, setThreshold] = useState('5');
   const [tva, setTva] = useState('19');
@@ -156,33 +149,6 @@ export default function SettingsPage() {
         </div>
       </Section>
 
-      {/* Synchronisation */}
-      <Section icon={<Wifi className="h-4 w-4" />} title="Synchronisation">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">En attente</span>
-            <Badge
-              variant="secondary"
-              className={cn(
-                'tabular-nums transition-colors',
-                pendingCount > 0 && 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-              )}
-            >
-              {pendingCount}
-            </Badge>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={sync}
-            disabled={isSyncing || pendingCount === 0}
-            className="h-8 rounded-lg border-border/40 bg-muted/40 text-xs gap-1.5"
-          >
-            <RefreshCw className={cn('h-3.5 w-3.5', isSyncing && 'animate-spin')} />
-            {isSyncing ? 'Sync…' : 'Forcer sync'}
-          </Button>
-        </div>
-      </Section>
 
       {/* Save */}
       <Button

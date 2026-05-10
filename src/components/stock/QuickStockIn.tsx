@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { StockBadge } from '@/components/products/StockBadge';
 import { Plus, Package, ChevronDown, Loader2, Sparkles } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProductItem {
   id: string;

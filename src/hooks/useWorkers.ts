@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { supabaseClient } from '@/lib/supabase/client';
 
-// ─── Types ───────────────────────────────────────────────
+
 
 export interface Worker {
   id: string;
@@ -61,13 +61,6 @@ export interface WorkerSale {
   sale_items?: { count: number }[] | null;
 }
 
-// ─── Supabase Client ─────────────────────────────────────
-
-function getSupabase() {
-  return createClient();
-}
-
-// ─── Query Keys ──────────────────────────────────────────
 
 export const workerKeys = {
   all: ["workers"] as const,
@@ -111,8 +104,7 @@ async function fetchWorkers(filters?: {
   search?: string;
   activeOnly?: boolean;
 }): Promise<Worker[]> {
-  const supabase = getSupabase();
-
+const supabase = supabaseClient;
   let query = supabase
     .from("profiles")
     .select("*")
@@ -134,7 +126,7 @@ async function fetchWorkers(filters?: {
 // ─── Fetch Single Worker ─────────────────────────────────
 
 async function fetchWorker(id: string): Promise<Worker | null> {
-  const supabase = getSupabase();
+const supabase = supabaseClient;
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
@@ -148,7 +140,7 @@ async function fetchWorker(id: string): Promise<Worker | null> {
 // ─── Fetch Worker Sales Summary ──────────────────────────
 
 async function fetchWorkerSalesSummary(workerId: string): Promise<WorkerSalesSummary> {
-  const supabase = getSupabase();
+const supabase = supabaseClient;
   const now = new Date();
   const todayIso = startOfDay(now);
   const weekIso = startOfWeek(now);
@@ -198,7 +190,7 @@ async function fetchWorkerSales(
   workerId: string,
   options?: { from?: string; to?: string; limit?: number; offset?: number }
 ): Promise<{ sales: WorkerSale[]; count: number }> {
-  const supabase = getSupabase();
+  const supabase = supabaseClient;
 
   let query = supabase
     .from("sales")
@@ -245,7 +237,7 @@ async function createWorker(formData: WorkerFormData): Promise<Worker> {
 // ─── Update Worker ───────────────────────────────────────
 
 async function updateWorker(data: WorkerUpdateData): Promise<Worker> {
-  const supabase = getSupabase();
+const supabase = supabaseClient;
   const { id, ...updates } = data;
 
   const { data: profileData, error } = await supabase
@@ -275,7 +267,7 @@ async function deleteWorker(id: string): Promise<void> {
 // ─── Toggle Worker Active Status ─────────────────────────
 
 async function toggleWorkerActive(id: string, isActive: boolean): Promise<Worker> {
-  const supabase = getSupabase();
+const supabase = supabaseClient;
   const { data, error } = await supabase
     .from("profiles")
     .update({ is_active: isActive })

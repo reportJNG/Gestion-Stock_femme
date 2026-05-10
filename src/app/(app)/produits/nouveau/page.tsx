@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import {useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCategories, useColors, useBrands } from '@/hooks/useProducts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
 import { StepIndicator } from '@/components/products/StepIndicator';
 import { ColorPicker } from '@/components/products/ColorPicker';
 import { SizeSelector } from '@/components/products/SizeSelector';
@@ -26,7 +26,7 @@ const STEPS = ['Informations', 'Couleurs & Tailles', 'Récapitulatif'];
 
 export default function NewProductPage() {
   const router = useRouter();
-  const supabase = createClient();
+const supabase = supabaseClient;
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
 

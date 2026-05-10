@@ -1,7 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
+
+
 
 type Period = 'today' | 'week' | 'month';
 
@@ -27,8 +29,7 @@ function num(v: any): number {
 }
 
 export function useReport(period: Period) {
-  const supabase = createClient();
-
+const supabase = supabaseClient;
   return useQuery({
     queryKey: ['report', period],
     queryFn: async () => {

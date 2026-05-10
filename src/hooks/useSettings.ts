@@ -1,7 +1,9 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
+
+
 
 function parseSettingValue(value: unknown): string | number {
   if (typeof value === 'number' || typeof value === 'string') return value;
@@ -10,7 +12,7 @@ function parseSettingValue(value: unknown): string | number {
 }
 
 export function useSettings() {
-  const supabase = createClient();
+const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
   const { data: settings, isLoading } = useQuery({

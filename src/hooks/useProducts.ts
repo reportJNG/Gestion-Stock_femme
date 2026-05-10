@@ -1,7 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
+
+
 
 const PAGE_SIZE = 20;
 
@@ -99,7 +101,7 @@ function aggregateProducts(rows: VariantFullRow[]): ProductListItem[] {
 }
 
 export function useProducts(query?: string, categoryId?: string, page: number = 0) {
-  const supabase = createClient();
+const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['products', query, categoryId, page],
@@ -151,7 +153,7 @@ export function useProducts(query?: string, categoryId?: string, page: number = 
 }
 
 export function useProductDetail(productId: string) {
-  const supabase = createClient();
+const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['product', productId],
@@ -246,7 +248,7 @@ export function useProductDetail(productId: string) {
 }
 
 export function useCategories() {
-  const supabase = createClient();
+const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['categories'],
@@ -267,7 +269,7 @@ export function useCategories() {
 }
 
 export function useColors() {
-  const supabase = createClient();
+const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['colors'],
@@ -289,7 +291,7 @@ export function useColors() {
 }
 
 export function useBrands() {
-  const supabase = createClient();
+const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['brands'],

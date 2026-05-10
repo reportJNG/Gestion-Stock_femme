@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useProductDetail, useBrands } from '@/hooks/useProducts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,13 +19,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function EditProductClient() {
   const params = useParams();
   const router = useRouter();
   const productId = params.id as string;
-  const supabase = createClient();
+const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useProductDetail(productId);

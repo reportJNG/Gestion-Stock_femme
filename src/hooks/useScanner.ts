@@ -1,7 +1,9 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
+
+
 
 export type ScanResult = {
   success: boolean;
@@ -16,7 +18,7 @@ export type ScanResult = {
 };
 
 export function useScanner() {
-  const supabase = createClient();
+const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
   const scanMutation = useMutation({

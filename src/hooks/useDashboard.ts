@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
+
 
 function todayAlgiersDate(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -18,7 +19,7 @@ function num(value: number | string | null | undefined): number {
 }
 
 export function useDashboardStats() {
-  const supabase = createClient();
+const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['dashboard-stats'],
@@ -70,7 +71,7 @@ export function useDashboardStats() {
 }
 
 export function useLowStockItems() {
-  const supabase = createClient();
+const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['low-stock-items'],
@@ -99,7 +100,7 @@ export function useLowStockItems() {
 }
 
 export function useTopProducts() {
-  const supabase = createClient();
+const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['top-products'],

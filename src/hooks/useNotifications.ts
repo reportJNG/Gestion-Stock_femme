@@ -1,10 +1,12 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { supabaseClient } from '@/lib/supabase/client';
+
+
 
 export function useNotifications() {
-  const supabase = createClient();
+const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
   const { data: unreadCount = 0 } = useQuery({
@@ -14,7 +16,6 @@ export function useNotifications() {
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('is_read', false);
-
       if (error) throw error;
       return count || 0;
     },
@@ -29,7 +30,6 @@ export function useNotifications() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
-
       if (error) throw error;
       return data || [];
     },
@@ -44,7 +44,6 @@ export function useNotifications() {
         .eq('id', notificationId)
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
