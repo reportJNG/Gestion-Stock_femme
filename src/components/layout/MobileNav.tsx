@@ -17,13 +17,13 @@ const mainNav = [
   { href: '/stock',           label: 'Stock',       icon: ClipboardList,    roles: ['admin', 'worker'] },
   { href: '/scanner',         label: 'Scan',        icon: ScanLine,         roles: ['admin', 'worker'] },
   { href: '/ventes',          label: 'Ventes',      icon: Receipt,          roles: ['admin', 'worker'] },
-  { href: '/travailleurs',    label: 'Travailleurs', icon: Users,           roles: ['admin'] }, // Added this line
 ];
 
 
 const moreNav = [
   { href: '/rapports',   label: 'Rapports',   icon: BarChart3, roles: ['admin'] },
   { href: '/archives',   label: 'Archives',   icon: Archive,   roles: ['admin'] },
+  { href: '/travailleurs', label: 'Travailleurs', icon: Users, roles: ['admin'] },
   { href: '/parametres', label: 'Paramètres', icon: Settings,  roles: ['admin'] },
 ];
 
