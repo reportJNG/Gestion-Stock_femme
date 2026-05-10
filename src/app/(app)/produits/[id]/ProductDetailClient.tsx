@@ -1,38 +1,29 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useProductDetail } from '@/hooks/useProducts';
-import { useVariants } from '@/hooks/useVariants';
-import { useSettings } from '@/hooks/useSettings';
+import { ProductLabelsDialog } from '@/components/products/ProductLabelsDialog';
 import { VariantGrid } from '@/components/products/VariantGrid';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
+import { useProductDetail } from '@/hooks/useProducts';
+import { useSettings } from '@/hooks/useSettings';
+import { useVariants } from '@/hooks/useVariants';
+import { formatDZD } from '@/lib/utils';
 import {
-  Package,
-  Pencil,
   ArrowLeft,
   ImageOff,
+  Package,
+  Pencil,
   Printer,
   RefreshCw,
   WifiOff,
 } from 'lucide-react';
-import Link from 'next/link';
 import { toast } from 'sonner';
-import { formatDZD } from '@/lib/utils';
-
-import { openPrintWindow } from '@/lib/print/printService';
-import { generateLabelsGridHTML, LABEL_STYLES, type LabelData } from '@/lib/print/labelTemplate';
-
-type PrintableVariant = {
-  barcode: string;
-  color_name?: string;
-  color?: { name_fr?: string };
-  is_archived: boolean;
-  size: string;
-};
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
@@ -40,11 +31,11 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       <WifiOff className="h-7 w-7 text-muted-foreground" />
       <div>
         <p className="font-semibold text-foreground">Connexion interrompue</p>
-        <p className="mt-1 text-sm text-muted-foreground">Réessayez.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Reessayez.</p>
       </div>
       <Button onClick={onRetry} variant="outline" className="rounded-xl">
         <RefreshCw className="h-4 w-4 mr-2" />
-        Réessayer
+        Reessayer
       </Button>
     </div>
   );
@@ -57,6 +48,7 @@ export function ProductDetailClient() {
   const { data, isLoading, isError, refetch } = useProductDetail(productId);
   const { addStock, archiveVariant } = useVariants();
   const { settings } = useSettings();
+  const [labelsDialogOpen, setLabelsDialogOpen] = useState(false);
 
   const handleAddStock = async (variantId: string, quantity: number) => {
     await addStock.mutateAsync({ variantId, quantity });
@@ -68,33 +60,15 @@ export function ProductDetailClient() {
     toast.success('Variant archive');
   };
 
-  const handlePrintEtiquettes = () => {
+  const handleOpenLabelsDialog = () => {
     if (!data?.data) return;
 
-    const { product, variants } = data.data;
-    const printableVariants = variants.filter((variant: PrintableVariant) => !variant.is_archived);
-
-    if (printableVariants.length === 0) {
-      toast.warning('Aucun variant actif à imprimer');
+    if (!data.data.variants.some((variant) => !variant.is_archived)) {
+      toast.warning('Aucun variant actif a imprimer');
       return;
     }
 
-    const labels: LabelData[] = printableVariants.map((variant: PrintableVariant) => ({
-      barcode:     variant.barcode,
-      productName: product.name,
-      brandName:   product.brand?.name,
-      colorName:   variant.color_name ?? variant.color?.name_fr,
-      size:        variant.size,
-      priceTTC:    product.price_ttc ?? product.sale_price,
-    }));
-
-    const html = generateLabelsGridHTML(labels);
-
-    openPrintWindow(html, {
-      title:        `Étiquettes — ${product.name}`,
-      withBarcodes: true,
-      extraStyles:  LABEL_STYLES,
-    });
+    setLabelsDialogOpen(true);
   };
 
   if (isLoading) {
@@ -146,7 +120,7 @@ export function ProductDetailClient() {
             </Button>
           </Link>
 
-          <Button variant="outline" size="sm" onClick={handlePrintEtiquettes}>
+          <Button variant="outline" size="sm" onClick={handleOpenLabelsDialog}>
             <Printer className="h-4 w-4 stroke-[1.8]" />
             Etiquettes
           </Button>
@@ -175,7 +149,8 @@ export function ProductDetailClient() {
                 <div>
                   <h1 className="text-xl font-bold">{product.name}</h1>
                   <p className="text-sm text-muted-foreground">
-                    {product.category?.name_fr}{product.brand?.name ? ` — ${product.brand.name}` : ''}
+                    {product.category?.name_fr}
+                    {product.brand?.name ? ` - ${product.brand.name}` : ''}
                   </p>
                 </div>
                 <Badge variant={product.is_archived ? 'destructive' : 'secondary'}>
@@ -198,7 +173,9 @@ export function ProductDetailClient() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Marge</p>
-                  <p className="font-medium text-emerald-600 dark:text-emerald-300">{product.margin_pct}%</p>
+                  <p className="font-medium text-emerald-600 dark:text-emerald-300">
+                    {product.margin_pct}%
+                  </p>
                 </div>
               </div>
 
@@ -227,6 +204,13 @@ export function ProductDetailClient() {
           />
         </CardContent>
       </Card>
+
+      <ProductLabelsDialog
+        open={labelsDialogOpen}
+        onOpenChange={setLabelsDialogOpen}
+        product={product}
+        variants={variants}
+      />
     </div>
   );
 }

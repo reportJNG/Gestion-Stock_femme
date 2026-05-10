@@ -245,6 +245,7 @@ export function useProductDetail(productId: string) {
             color_id: row.color_id,
             color_code: row.color_code,
             color_name: row.color_name,
+            color_hex: row.color_hex || '#cccccc',
             size: row.size,
             size_code: row.size_code,
             barcode: row.barcode,

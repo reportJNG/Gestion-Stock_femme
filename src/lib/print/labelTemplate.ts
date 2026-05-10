@@ -13,8 +13,9 @@ export interface LabelData {
  * L'id du SVG est unique (bc-${barcode}) pour que JsBarcode
  * puisse cibler chaque étiquette indépendamment.
  */
-export function generateLabelHTML(data: LabelData): string {
+export function generateLabelHTML(data: LabelData, targetId?: string): string {
   const { barcode, productName, brandName, colorName, size, priceTTC, currency = 'DZD' } = data;
+  const barcodeTargetId = targetId ?? `bc-${barcode}`;
 
   const variantLine = [colorName, size].filter(Boolean).join(' / ');
   const priceFormatted = `${Number(priceTTC).toLocaleString('fr-DZ')} ${currency}`;
@@ -58,7 +59,8 @@ export function generateLabelHTML(data: LabelData): string {
       </div>` : ''}
 
       <svg
-        id="bc-${barcode}"
+        id="${barcodeTargetId}"
+        data-barcode="${barcode}"
         style="width: 44mm; height: 10mm; margin-top: 1.5mm;"
       ></svg>
 
@@ -84,7 +86,7 @@ export function generateLabelsGridHTML(labels: LabelData[]): string {
       gap: 3mm;
       padding: 8mm;
     ">
-      ${labels.map(generateLabelHTML).join('')}
+      ${labels.map((label, index) => generateLabelHTML(label, `bc-${index}`)).join('')}
     </div>
   `;
 }

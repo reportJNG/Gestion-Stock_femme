@@ -20,7 +20,7 @@ export interface PrintOptions {
 export function openPrintWindow(
   htmlContent: string,
   options: PrintOptions = {},
-): () => void {
+): (() => void) | null {
   const {
     title       = 'Impression',
     withBarcodes = false,
@@ -31,7 +31,7 @@ export function openPrintWindow(
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     console.error('Impossible d\'ouvrir la fenêtre d\'impression — popups bloqués ?');
-    return () => {};
+    return null;
   }
 
   // Script JsBarcode + auto-scan de tous les SVG id="bc-*"
@@ -41,7 +41,7 @@ export function openPrintWindow(
       <script>
         function renderBarcodes() {
           document.querySelectorAll('svg[id^="bc-"]').forEach(function(svg) {
-            var value = svg.id.replace('bc-', '');
+            var value = svg.getAttribute('data-barcode') || svg.id.replace('bc-', '');
             try {
               JsBarcode(svg, value, {
                 format:       'CODE128',
