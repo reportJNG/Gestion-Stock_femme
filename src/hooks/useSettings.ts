@@ -2,8 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabaseClient } from '@/lib/supabase/client';
+import { withTimeout } from '@/lib/supabase/withTimeout';
 
-
+// ─── useSettings ──────────────────────────────────────────────────────────────
 
 function parseSettingValue(value: unknown): string | number {
   if (typeof value === 'number' || typeof value === 'string') return value;
@@ -12,16 +13,18 @@ function parseSettingValue(value: unknown): string | number {
 }
 
 export function useSettings() {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
-  const { data: settings, isLoading } = useQuery({
+  const { data: settings, isLoading, isError, refetch } = useQuery({
     queryKey: ['settings'],
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 10,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .order('key', { ascending: true });
+      const { data, error } = await withTimeout(
+        supabase.from('settings').select('*').order('key', { ascending: true })
+      );
 
       if (error) {
         console.error('[useSettings] Supabase error:', error);
@@ -47,17 +50,9 @@ const supabase = supabaseClient;
     mutationFn: async ({ key, value }: { key: string; value: string | number }) => {
       const { data, error } = await supabase
         .from('settings')
-        .upsert(
-          {
-            key,
-            value,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'key' }
-        )
+        .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
         .select()
         .single();
-
       if (error) throw error;
       return data;
     },
@@ -68,5 +63,5 @@ const supabase = supabaseClient;
     },
   });
 
-  return { settings, isLoading, updateSetting };
+  return { settings, isLoading, isError, refetch, updateSetting };
 }

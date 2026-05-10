@@ -15,21 +15,37 @@ import {
   ArrowLeft,
   ImageOff,
   Printer,
+  RefreshCw,
+  WifiOff,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { formatDZD } from '@/lib/utils';
 
-// ─── lib/print ───────────────────────────────────────────────────────────────
 import { openPrintWindow } from '@/lib/print/printService';
 import { generateLabelsGridHTML, LABEL_STYLES, type LabelData } from '@/lib/print/labelTemplate';
-// ─────────────────────────────────────────────────────────────────────────────
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border/40 bg-card p-12 text-center shadow-sm">
+      <WifiOff className="h-7 w-7 text-muted-foreground" />
+      <div>
+        <p className="font-semibold text-foreground">Connexion interrompue</p>
+        <p className="mt-1 text-sm text-muted-foreground">Réessayez.</p>
+      </div>
+      <Button onClick={onRetry} variant="outline" className="rounded-xl">
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Réessayer
+      </Button>
+    </div>
+  );
+}
 
 export function ProductDetailClient() {
   const params = useParams();
   const productId = params.id as string;
 
-  const { data, isLoading } = useProductDetail(productId);
+  const { data, isLoading, isError, refetch } = useProductDetail(productId);
   const { addStock, archiveVariant } = useVariants();
   const { settings } = useSettings();
 
@@ -43,13 +59,10 @@ export function ProductDetailClient() {
     toast.success('Variant archive');
   };
 
-  // ─── PRINT ÉTIQUETTES ─────────────────────────────────────────────────────
   const handlePrintEtiquettes = () => {
     if (!data?.data) return;
 
     const { product, variants } = data.data;
-
-    // Variants actifs uniquement
     const printableVariants = variants.filter((v: any) => !v.is_archived);
 
     if (printableVariants.length === 0) {
@@ -57,8 +70,6 @@ export function ProductDetailClient() {
       return;
     }
 
-    // Construire un LabelData par variant
-    // barcode vient de la DB (product_variants.barcode = generate_sku() du schéma SQL)
     const labels: LabelData[] = printableVariants.map((variant: any) => ({
       barcode:     variant.barcode,
       productName: product.name,
@@ -72,11 +83,10 @@ export function ProductDetailClient() {
 
     openPrintWindow(html, {
       title:        `Étiquettes — ${product.name}`,
-      withBarcodes: true,   // injecte JsBarcode → Code128 sur chaque SVG bc-*
+      withBarcodes: true,
       extraStyles:  LABEL_STYLES,
     });
   };
-  // ──────────────────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -85,6 +95,10 @@ export function ProductDetailClient() {
         <Skeleton className="h-[300px]" />
       </div>
     );
+  }
+
+  if (isError) {
+    return <ErrorState onRetry={() => refetch()} />;
   }
 
   if (!data?.data) {

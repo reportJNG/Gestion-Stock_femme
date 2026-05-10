@@ -6,6 +6,7 @@ import { SalesChart } from '@/components/dashboard/SalesChart';
 import { LowStockAlert } from '@/components/dashboard/LowStockAlert';
 import { TopProducts } from '@/components/dashboard/TopProducts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { formatDZD, formatNumber } from '@/lib/utils';
 import {
   DollarSign,
@@ -16,12 +17,56 @@ import {
   TrendingUp,
   ShoppingBag,
   HeartHandshake,
+  RefreshCw,
+  WifiOff,
 } from 'lucide-react';
 
+// ─── Error state component ─────────────────────────────────────────────────────
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-rose-soft/20 bg-white/80 backdrop-blur-sm p-12 text-center shadow-sm">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-light/40 text-primary">
+          <WifiOff className="h-7 w-7" />
+        </div>
+        <div>
+          <p className="font-semibold text-foreground">Connexion interrompue</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Le serveur met trop de temps à répondre. Vérifiez votre connexion et réessayez.
+          </p>
+        </div>
+        <Button
+          onClick={onRetry}
+          className="rounded-xl"
+          variant="outline"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Réessayer
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ─────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: lowStockItems = [] } = useLowStockItems();
-  const { data: topProducts = [] } = useTopProducts();
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: statsError,
+    refetch: refetchStats,
+  } = useDashboardStats();
+
+  const { data: lowStockItems = [], refetch: refetchLowStock } = useLowStockItems();
+  const { data: topProducts = [], refetch: refetchTopProducts } = useTopProducts();
+
+  const handleRetry = () => {
+    refetchStats();
+    refetchLowStock();
+    refetchTopProducts();
+  };
 
   const chartData = [
     { date: 'Lun', revenue: 12500 },
@@ -47,6 +92,11 @@ export default function DashboardPage() {
         <Skeleton className="h-72 rounded-2xl bg-rose-light/20" />
       </div>
     );
+  }
+
+  // ✅ Error state: shows instead of infinite skeleton when Supabase times out
+  if (statsError) {
+    return <ErrorState onRetry={handleRetry} />;
   }
 
   return (

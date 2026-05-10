@@ -16,19 +16,35 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border/40 bg-card p-12 text-center shadow-sm">
+      <WifiOff className="h-7 w-7 text-muted-foreground" />
+      <div>
+        <p className="font-semibold text-foreground">Connexion interrompue</p>
+        <p className="mt-1 text-sm text-muted-foreground">Réessayez.</p>
+      </div>
+      <Button onClick={onRetry} variant="outline" className="rounded-xl">
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Réessayer
+      </Button>
+    </div>
+  );
+}
 
 export function EditProductClient() {
   const params = useParams();
   const router = useRouter();
   const productId = params.id as string;
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useProductDetail(productId);
+  const { data, isLoading, isError, refetch } = useProductDetail(productId);
   const { data: brands } = useBrands();
 
   const [name, setName] = useState('');
@@ -86,6 +102,14 @@ const supabase = supabaseClient;
       <div className="mx-auto max-w-2xl px-4 py-6">
         <Skeleton className="h-10 w-24 rounded-xl bg-rose-light/30 mb-6" />
         <Skeleton className="h-[400px] rounded-2xl bg-rose-light/20" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-6">
+        <ErrorState onRetry={() => refetch()} />
       </div>
     );
   }

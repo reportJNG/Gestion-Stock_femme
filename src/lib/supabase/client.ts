@@ -15,8 +15,15 @@ function createClient() {
   return createBrowserClient(url, key);
 }
 
-// ✅ One shared instance for the whole app
 export const supabaseClient = createClient();
 
-// Keep createClient export for AuthContext's useRef pattern
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      supabaseClient.auth.refreshSession().catch(() => {
+      });
+    }
+  });
+}
+
 export { createClient };

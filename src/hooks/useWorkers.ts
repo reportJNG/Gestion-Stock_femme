@@ -3,8 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabaseClient } from '@/lib/supabase/client';
-
-
+import { withTimeout } from '@/lib/supabase/withTimeout';
 
 export interface Worker {
   id: string;
@@ -61,7 +60,6 @@ export interface WorkerSale {
   sale_items?: { count: number }[] | null;
 }
 
-
 export const workerKeys = {
   all: ["workers"] as const,
   lists: () => [...workerKeys.all, "list"] as const,
@@ -70,11 +68,10 @@ export const workerKeys = {
   details: () => [...workerKeys.all, "detail"] as const,
   detail: (id: string) => [...workerKeys.details(), id] as const,
   sales: (id: string) => [...workerKeys.detail(id), "sales"] as const,
-  salesSummary: (id: string) =>
-    [...workerKeys.detail(id), "sales-summary"] as const,
+  salesSummary: (id: string) => [...workerKeys.detail(id), "sales-summary"] as const,
 };
 
-// ─── Helpers ─────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function startOfDay(date: Date): string {
   const d = new Date(date);
@@ -98,13 +95,10 @@ function startOfMonth(date: Date): string {
   return d.toISOString();
 }
 
-// ─── Fetch Workers ───────────────────────────────────────
+// ─── Fetch functions ──────────────────────────────────────────────────────────
 
-async function fetchWorkers(filters?: {
-  search?: string;
-  activeOnly?: boolean;
-}): Promise<Worker[]> {
-const supabase = supabaseClient;
+async function fetchWorkers(filters?: { search?: string; activeOnly?: boolean }): Promise<Worker[]> {
+  const supabase = supabaseClient;
   let query = supabase
     .from("profiles")
     .select("*")
@@ -118,73 +112,48 @@ const supabase = supabaseClient;
     );
   }
 
-  const { data, error } = await query;
+  const { data, error } = await withTimeout(query);
   if (error) throw new Error(error.message);
   return (data as Worker[]) || [];
 }
 
-// ─── Fetch Single Worker ─────────────────────────────────
-
 async function fetchWorker(id: string): Promise<Worker | null> {
-const supabase = supabaseClient;
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", id)
-    .eq("role", "worker")
-    .single();
+  const supabase = supabaseClient;
+  const { data, error } = await withTimeout(
+    supabase.from("profiles").select("*").eq("id", id).eq("role", "worker").single()
+  );
   if (error) throw new Error(error.message);
   return data as Worker | null;
 }
 
-// ─── Fetch Worker Sales Summary ──────────────────────────
-
 async function fetchWorkerSalesSummary(workerId: string): Promise<WorkerSalesSummary> {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
   const now = new Date();
   const todayIso = startOfDay(now);
   const weekIso = startOfWeek(now);
   const monthIso = startOfMonth(now);
 
-  const { data: allSales, error } = await supabase
-    .from("sales")
-    .select("*")
-    .eq("sold_by", workerId);
+  const { data: allSales, error } = await withTimeout(
+    supabase.from("sales").select("*").eq("sold_by", workerId)
+  );
 
   if (error) throw new Error(error.message);
 
   const sales = allSales || [];
-  let revenue_ht = 0,
-    revenue_ttc = 0,
-    today_sales = 0,
-    today_revenue = 0,
-    week_sales = 0,
-    month_sales = 0;
+  let revenue_ht = 0, revenue_ttc = 0, today_sales = 0, today_revenue = 0,
+      week_sales = 0, month_sales = 0;
 
   for (const s of sales) {
     const createdAt = s.created_at;
     revenue_ht += s.total_ht || 0;
     revenue_ttc += s.total_ttc || 0;
-    if (createdAt >= todayIso) {
-      today_sales++;
-      today_revenue += s.total_ttc || 0;
-    }
+    if (createdAt >= todayIso) { today_sales++; today_revenue += s.total_ttc || 0; }
     if (createdAt >= weekIso) week_sales++;
     if (createdAt >= monthIso) month_sales++;
   }
 
-  return {
-    total_sales: sales.length,
-    revenue_ht,
-    revenue_ttc,
-    today_sales,
-    today_revenue,
-    week_sales,
-    month_sales,
-  };
+  return { total_sales: sales.length, revenue_ht, revenue_ttc, today_sales, today_revenue, week_sales, month_sales };
 }
-
-// ─── Fetch Worker Sales ──────────────────────────────────
 
 async function fetchWorkerSales(
   workerId: string,
@@ -204,7 +173,7 @@ async function fetchWorkerSales(
   if (options?.offset != null && options.offset > 0)
     query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
 
-  const { data, error, count } = await query;
+  const { data, error, count } = await withTimeout(query);
   if (error) throw new Error(error.message);
 
   const sales = (data || []).map((sale: any) => ({
@@ -215,45 +184,26 @@ async function fetchWorkerSales(
   return { sales: sales as WorkerSale[], count: count || 0 };
 }
 
-// ─── Create Worker ───────────────────────────────────────
-// Uses a server-side API route with the service_role key so the browser
-// session is NEVER swapped — no crash, no redirect, no auth state change.
 async function createWorker(formData: WorkerFormData): Promise<Worker> {
   const res = await fetch("/api/workers/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(formData),
   });
-
   const json = await res.json();
-
-  if (!res.ok) {
-    throw new Error(json?.error || "Erreur lors de la création du travailleur");
-  }
-
+  if (!res.ok) throw new Error(json?.error || "Erreur lors de la création du travailleur");
   return json.worker as Worker;
 }
 
-// ─── Update Worker ───────────────────────────────────────
-
 async function updateWorker(data: WorkerUpdateData): Promise<Worker> {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
   const { id, ...updates } = data;
-
   const { data: profileData, error } = await supabase
-    .from("profiles")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .single();
-
+    .from("profiles").update(updates).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   return profileData as Worker;
 }
 
-// ─── Delete Worker ───────────────────────────────────────
-// Goes through API route so both auth.users AND profiles are deleted.
-// Deleting only from profiles leaves a ghost user who can still log in.
 async function deleteWorker(id: string): Promise<void> {
   const res = await fetch("/api/workers/delete", {
     method: "DELETE",
@@ -264,29 +214,22 @@ async function deleteWorker(id: string): Promise<void> {
   if (!res.ok) throw new Error(json?.error || "Erreur lors de la suppression");
 }
 
-// ─── Toggle Worker Active Status ─────────────────────────
-
 async function toggleWorkerActive(id: string, isActive: boolean): Promise<Worker> {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
   const { data, error } = await supabase
-    .from("profiles")
-    .update({ is_active: isActive })
-    .eq("id", id)
-    .select()
-    .single();
-
+    .from("profiles").update({ is_active: isActive }).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   return data as Worker;
 }
 
-// ═════════════════════════════════════════════════════════
-//  TANSTACK QUERY HOOKS
-// ═════════════════════════════════════════════════════════
+// ─── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useWorkers(filters?: { search?: string; activeOnly?: boolean }) {
   return useQuery({
     queryKey: workerKeys.list(filters || {}),
     queryFn: () => fetchWorkers(filters),
+    retry: 2,
+    retryDelay: 2000,
     staleTime: 1000 * 60 * 2,
   });
 }
@@ -296,6 +239,8 @@ export function useWorker(id: string) {
     queryKey: workerKeys.detail(id),
     queryFn: () => fetchWorker(id),
     enabled: !!id,
+    retry: 2,
+    retryDelay: 2000,
     staleTime: 1000 * 60 * 2,
   });
 }
@@ -305,6 +250,8 @@ export function useWorkerSalesSummary(workerId: string) {
     queryKey: workerKeys.salesSummary(workerId),
     queryFn: () => fetchWorkerSalesSummary(workerId),
     enabled: !!workerId,
+    retry: 2,
+    retryDelay: 2000,
     staleTime: 1000 * 60,
   });
 }
@@ -317,6 +264,8 @@ export function useWorkerSales(
     queryKey: [...workerKeys.sales(workerId), options || {}],
     queryFn: () => fetchWorkerSales(workerId, options),
     enabled: !!workerId,
+    retry: 2,
+    retryDelay: 2000,
     staleTime: 1000 * 60,
   });
 }

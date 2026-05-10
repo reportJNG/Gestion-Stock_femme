@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isActive, setIsActive]   = useState(false);
   const isMounted                 = useRef(true);
   const queryClient               = useQueryClient();
-  const supabase                  = supabaseClient; // ✅ one shared instance for the whole app
+  const supabase                  = supabaseClient;
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data: profile } = await supabase
@@ -69,13 +69,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, s) => {
         if (!isMounted.current) return;
 
-        // ✅ Cancel stale in-flight queries, update session, refetch with new token
         if (event === 'TOKEN_REFRESHED') {
           setSession(s);
           setUser(s?.user ?? null);
           if (s?.user) await fetchProfile(s.user.id);
-          await queryClient.cancelQueries();
+
+          // ✅ FIXED: Don't cancelQueries + immediately invalidateQueries.
+          // The old code killed all in-flight requests then re-fired them
+          // instantly against a still-waking Supabase free-tier instance,
+          // causing the silent infinite loading on tab return.
+          //
+          // Instead: mark queries as stale so they refetch lazily on next
+          // user interaction, giving Supabase time to fully wake up first.
           queryClient.invalidateQueries();
+
           if (isMounted.current) setIsLoading(false);
           return;
         }
@@ -98,9 +105,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    // ✅ On tab return: wait 2 seconds for Supabase free-tier to wake up,
+    // THEN invalidate queries so they refetch against a live connection.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          if (isMounted.current) {
+            queryClient.invalidateQueries();
+          }
+        }, 2000);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       isMounted.current = false;
       subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchProfile, queryClient, supabase]);
 

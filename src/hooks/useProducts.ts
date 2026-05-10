@@ -2,8 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabaseClient } from '@/lib/supabase/client';
-
-
+import { withTimeout } from '@/lib/supabase/withTimeout';
 
 const PAGE_SIZE = 20;
 
@@ -101,10 +100,13 @@ function aggregateProducts(rows: VariantFullRow[]): ProductListItem[] {
 }
 
 export function useProducts(query?: string, categoryId?: string, page: number = 0) {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['products', query, categoryId, page],
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 2,
     queryFn: async () => {
       let request = supabase
         .from('v_variant_full')
@@ -117,7 +119,7 @@ const supabase = supabaseClient;
         request = request.eq('category_id', categoryId);
       }
 
-      const { data, error } = await request;
+      const { data, error } = await withTimeout(request);
 
       if (error) {
         console.error('[useProducts] Supabase error:', error);
@@ -127,14 +129,16 @@ const supabase = supabaseClient;
       const rawRows = (data || []) as VariantFullRow[];
       const normalizedQuery = (query || '').trim().toLowerCase();
       const filteredRows = normalizedQuery
-        ? rawRows.filter((row) => [
-            row.product_name,
-            row.category_name,
-            row.brand_name || '',
-            row.barcode,
-            row.color_name,
-            row.size,
-          ].some((value) => value.toLowerCase().includes(normalizedQuery)))
+        ? rawRows.filter((row) =>
+            [
+              row.product_name,
+              row.category_name,
+              row.brand_name || '',
+              row.barcode,
+              row.color_name,
+              row.size,
+            ].some((value) => value.toLowerCase().includes(normalizedQuery))
+          )
         : rawRows;
 
       const products = aggregateProducts(filteredRows);
@@ -153,17 +157,22 @@ const supabase = supabaseClient;
 }
 
 export function useProductDetail(productId: string) {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['product', productId],
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 2,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_variant_full')
-        .select('*')
-        .eq('product_id', productId)
-        .order('color_name', { ascending: true })
-        .order('size_code', { ascending: true });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('v_variant_full')
+          .select('*')
+          .eq('product_id', productId)
+          .order('color_name', { ascending: true })
+          .order('size_code', { ascending: true })
+      );
 
       if (error) {
         console.error('[useProductDetail] Supabase error:', error);
@@ -172,16 +181,15 @@ const supabase = supabaseClient;
 
       const rows = (data || []) as VariantFullRow[];
       const first = rows[0];
+      if (!first) return null;
 
-      if (!first) {
-        return null;
-      }
-
-      const { data: productRow, error: productError } = await supabase
-        .from('products')
-        .select('brand_id')
-        .eq('id', productId)
-        .maybeSingle();
+      const { data: productRow, error: productError } = await withTimeout(
+        supabase
+          .from('products')
+          .select('brand_id')
+          .eq('id', productId)
+          .maybeSingle()
+      );
 
       if (productError) {
         console.warn('[useProductDetail] Product brand warning:', productError);
@@ -215,7 +223,9 @@ const supabase = supabaseClient;
               code: first.category_code,
               name_fr: first.category_name,
             },
-            brand: first.brand_name ? { id: productRow?.brand_id || '', name: first.brand_name } : undefined,
+            brand: first.brand_name
+              ? { id: productRow?.brand_id || '', name: first.brand_name }
+              : undefined,
             cost_price: num(first.cost_price),
             sale_price: num(first.sale_price),
             tva_rate: num(first.tva_rate),
@@ -227,7 +237,9 @@ const supabase = supabaseClient;
             is_archived: first.product_archived,
           },
           colors: Array.from(colorsMap.values()),
-          sizes: Array.from(sizesMap.values()).sort((a, b) => a.size_code.localeCompare(b.size_code)),
+          sizes: Array.from(sizesMap.values()).sort((a, b) =>
+            a.size_code.localeCompare(b.size_code)
+          ),
           variants: rows.map((row) => ({
             id: row.id,
             color_id: row.color_id,
@@ -248,64 +260,58 @@ const supabase = supabaseClient;
 }
 
 export function useCategories() {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['categories'],
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 10,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
-      if (error) {
-        console.error('[useCategories] Supabase error:', error);
-        throw error;
-      }
-
+      const { data, error } = await withTimeout(
+        supabase.from('categories').select('*').order('sort_order', { ascending: true })
+      );
+      if (error) throw error;
       return data || [];
     },
   });
 }
 
 export function useColors() {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['colors'],
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 10,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('colors')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      if (error) {
-        console.error('[useColors] Supabase error:', error);
-        throw error;
-      }
-
+      const { data, error } = await withTimeout(
+        supabase
+          .from('colors')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true })
+      );
+      if (error) throw error;
       return data || [];
     },
   });
 }
 
 export function useBrands() {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['brands'],
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 10,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('brands')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) {
-        console.error('[useBrands] Supabase error:', error);
-        throw error;
-      }
-
+      const { data, error } = await withTimeout(
+        supabase.from('brands').select('*').order('name', { ascending: true })
+      );
+      if (error) throw error;
       return data || [];
     },
   });

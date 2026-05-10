@@ -5,8 +5,6 @@ import { useReport } from '@/hooks/useReport';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDZD, formatNumber, cn } from '@/lib/utils';
-// REMOVE these static imports:
-// import { exportToPDF, exportToExcel } from '@/lib/export/export-reports';
 import {
   BarChart,
   Bar,
@@ -19,7 +17,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { Download, FileText, Loader2 } from 'lucide-react';
+import { Download, FileText, Loader2, RefreshCw, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -95,13 +93,29 @@ function ChartSkeleton() {
   return <Skeleton className="h-[240px] rounded-2xl" />;
 }
 
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border/40 bg-card p-12 text-center shadow-sm">
+      <WifiOff className="h-7 w-7 text-muted-foreground" />
+      <div>
+        <p className="font-semibold text-foreground">Connexion interrompue</p>
+        <p className="mt-1 text-sm text-muted-foreground">Réessayez.</p>
+      </div>
+      <Button onClick={onRetry} variant="outline" className="rounded-xl">
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Réessayer
+      </Button>
+    </div>
+  );
+}
+
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>('week');
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
-  const { data: report, isLoading } = useReport(period);
+  const { data: report, isLoading, isError, refetch } = useReport(period);
 
   const statCards = [
     { label: 'Revenus période',  value: formatDZD(report?.revenue ?? 0) },
@@ -117,7 +131,6 @@ export default function ReportsPage() {
     }
     setExportingPDF(true);
     try {
-      // Dynamically import the PDF export function only when needed
       const { exportToPDF } = await import('@/lib/export/export-reports');
       await exportToPDF(report, PERIOD_LABELS[period]);
       toast.success('PDF exporté avec succès');
@@ -137,7 +150,6 @@ export default function ReportsPage() {
     }
     setExportingExcel(true);
     try {
-      // Dynamically import the Excel export function only when needed
       const { exportToExcel } = await import('@/lib/export/export-reports');
       await exportToExcel(report, PERIOD_LABELS[period]);
       toast.success('Excel exporté avec succès');
@@ -211,6 +223,8 @@ export default function ReportsPage() {
       {/* Stats cards */}
       {isLoading ? (
         <StatsSkeleton />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {statCards.map((item) => (
@@ -219,16 +233,14 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* Charts — only render when data is available */}
+      {!isLoading && !isError && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-        {/* Bar chart */}
-        <Card>
-          <CardHeader title="Revenus vs Bénéfices" />
-          <div className="px-5 py-4">
-            {isLoading ? (
-              <ChartSkeleton />
-            ) : (
+          {/* Bar chart */}
+          <Card>
+            <CardHeader title="Revenus vs Bénéfices" />
+            <div className="px-5 py-4">
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={report?.chart ?? []} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -250,93 +262,95 @@ export default function ReportsPage() {
                   <Bar dataKey="profit"  name="Bénéfice" fill="hsl(var(--rose-soft))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            )}
-          </div>
-        </Card>
-
-        {/* Pie chart - static for now, add real hook later */}
-        <Card>
-          <CardHeader title="Répartition par catégorie" />
-          <div className="px-5 py-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'T-shirts', value: 35 },
-                    { name: 'Chaussures', value: 25 },
-                    { name: 'Pantalons', value: 20 },
-                    { name: 'Vestes', value: 15 },
-                    { name: 'Accessoires', value: 5 },
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {CATEGORY_COLORS.map((color, index) => (
-                    <Cell key={`cell-${index}`} fill={color} strokeWidth={0} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Legend */}
-            <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center mt-3">
-              {['T-shirts', 'Chaussures', 'Pantalons', 'Vestes', 'Accessoires'].map((name, i) => (
-                <div key={name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[i] }} />
-                  {name}
-                </div>
-              ))}
             </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+
+          {/* Pie chart */}
+          <Card>
+            <CardHeader title="Répartition par catégorie" />
+            <div className="px-5 py-4">
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'T-shirts', value: 35 },
+                      { name: 'Chaussures', value: 25 },
+                      { name: 'Pantalons', value: 20 },
+                      { name: 'Vestes', value: 15 },
+                      { name: 'Accessoires', value: 5 },
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {CATEGORY_COLORS.map((color, index) => (
+                      <Cell key={`cell-${index}`} fill={color} strokeWidth={0} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                </PieChart>
+              </ResponsiveContainer>
+
+              {/* Legend */}
+              <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center mt-3">
+                {['T-shirts', 'Chaussures', 'Pantalons', 'Vestes', 'Accessoires'].map((name, i) => (
+                  <div key={name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[i] }} />
+                    {name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Top products */}
-      <Card>
-        <CardHeader title="Top produits" />
-        {isLoading ? (
-          <div className="px-5 py-8 space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : (
-          <div className="divide-y divide-border/30">
-            {(report?.topProducts ?? []).length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-muted-foreground">
-                Aucune vente sur cette période
-              </div>
-            ) : (
-              (report?.topProducts ?? []).map((product, i) => (
-                <div
-                  key={product.name}
-                  className="flex items-center justify-between px-5 py-3 hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-5 text-xs tabular-nums text-muted-foreground font-medium">
-                      {i + 1}
-                    </span>
-                    <span className="text-sm text-foreground">{product.name}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs text-muted-foreground">
-                      {formatNumber(product.sold)} vendus
-                    </span>
-                    <span className="text-sm tabular-nums font-medium">
-                      {formatDZD(product.revenue)}
-                    </span>
-                  </div>
+      {!isError && (
+        <Card>
+          <CardHeader title="Top produits" />
+          {isLoading ? (
+            <div className="px-5 py-8 space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="divide-y divide-border/30">
+              {(report?.topProducts ?? []).length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+                  Aucune vente sur cette période
                 </div>
-              ))
-            )}
-          </div>
-        )}
-      </Card>
+              ) : (
+                (report?.topProducts ?? []).map((product, i) => (
+                  <div
+                    key={product.name}
+                    className="flex items-center justify-between px-5 py-3 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-5 text-xs tabular-nums text-muted-foreground font-medium">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm text-foreground">{product.name}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs text-muted-foreground">
+                        {formatNumber(product.sold)} vendus
+                      </span>
+                      <span className="text-sm tabular-nums font-medium">
+                        {formatDZD(product.revenue)}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

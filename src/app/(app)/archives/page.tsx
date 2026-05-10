@@ -2,11 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabaseClient } from '@/lib/supabase/client';
+import { withTimeout } from '@/lib/supabase/withTimeout';
 import { useVariants } from '@/hooks/useVariants';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Package, RotateCcw } from 'lucide-react';
+import { Package, RefreshCw, RotateCcw, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ArchivedProduct = {
@@ -16,18 +17,36 @@ type ArchivedProduct = {
   total_variants: number;
 };
 
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border/40 bg-card p-12 text-center shadow-sm">
+      <WifiOff className="h-7 w-7 text-muted-foreground" />
+      <div>
+        <p className="font-semibold text-foreground">Connexion interrompue</p>
+        <p className="mt-1 text-sm text-muted-foreground">Réessayez.</p>
+      </div>
+      <Button onClick={onRetry} variant="outline" className="rounded-xl">
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Réessayer
+      </Button>
+    </div>
+  );
+}
+
 export default function ArchivesPage() {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
   const { unarchiveVariant } = useVariants();
 
-  const { data: archivedProducts = [], isLoading } = useQuery({
+  const { data: archivedProducts = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['archives'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_variant_full')
-        .select('product_id, product_name, category_name, product_archived, is_archived')
-        .or('product_archived.eq.true,is_archived.eq.true')
-        .order('product_name', { ascending: true });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('v_variant_full')
+          .select('product_id, product_name, category_name, product_archived, is_archived')
+          .or('product_archived.eq.true,is_archived.eq.true')
+          .order('product_name', { ascending: true })
+      );
 
       if (error) throw error;
 
@@ -48,6 +67,9 @@ const supabase = supabaseClient;
 
       return Array.from(map.values());
     },
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 2,
   });
 
   const handleUnarchive = async (productId: string) => {
@@ -62,6 +84,14 @@ const supabase = supabaseClient;
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-20 rounded-2xl bg-rose-light/20" />
         ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <ErrorState onRetry={() => refetch()} />
       </div>
     );
   }

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabaseClient } from '@/lib/supabase/client';
-
+import { withTimeout } from '@/lib/supabase/withTimeout';
 
 function todayAlgiersDate(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -19,30 +19,41 @@ function num(value: number | string | null | undefined): number {
 }
 
 export function useDashboardStats() {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['dashboard-stats'],
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 2,
     queryFn: async () => {
       const today = todayAlgiersDate();
 
       const [todayStats, lowStock, stockValue, bestProduct] = await Promise.all([
-        supabase
-          .from('v_daily_stats')
-          .select('sale_date, revenue_ttc, units_sold, profit_ht')
-          .eq('sale_date', today)
-          .maybeSingle(),
-        supabase
-          .from('v_low_stock')
-          .select('id', { count: 'exact', head: true }),
-        supabase
-          .from('v_stock_value')
-          .select('total_sale_value_ttc'),
-        supabase
-          .from('v_top_products')
-          .select('product_name, total_sold')
-          .limit(1)
-          .maybeSingle(),
+        withTimeout(
+          supabase
+            .from('v_daily_stats')
+            .select('sale_date, revenue_ttc, units_sold, profit_ht')
+            .eq('sale_date', today)
+            .maybeSingle()
+        ),
+        withTimeout(
+          supabase
+            .from('v_low_stock')
+            .select('id', { count: 'exact', head: true })
+        ),
+        withTimeout(
+          supabase
+            .from('v_stock_value')
+            .select('total_sale_value_ttc')
+        ),
+        withTimeout(
+          supabase
+            .from('v_top_products')
+            .select('product_name, total_sold')
+            .limit(1)
+            .maybeSingle()
+        ),
       ]);
 
       const errors = [todayStats.error, lowStock.error, stockValue.error, bestProduct.error].filter(Boolean);
@@ -71,16 +82,21 @@ const supabase = supabaseClient;
 }
 
 export function useLowStockItems() {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['low-stock-items'],
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 2,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_low_stock')
-        .select('id, product_name, color_name, size, quantity, barcode')
-        .order('quantity', { ascending: true })
-        .limit(10);
+      const { data, error } = await withTimeout(
+        supabase
+          .from('v_low_stock')
+          .select('id, product_name, color_name, size, quantity, barcode')
+          .order('quantity', { ascending: true })
+          .limit(10)
+      );
 
       if (error) {
         console.error('[useLowStockItems] Supabase error:', error);
@@ -100,16 +116,21 @@ const supabase = supabaseClient;
 }
 
 export function useTopProducts() {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
 
   return useQuery({
     queryKey: ['top-products'],
+    retry: 2,
+    retryDelay: 2000,
+    staleTime: 1000 * 60 * 2,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_top_products')
-        .select('product_name, total_sold, total_revenue_ttc')
-        .order('total_sold', { ascending: false })
-        .limit(5);
+      const { data, error } = await withTimeout(
+        supabase
+          .from('v_top_products')
+          .select('product_name, total_sold, total_revenue_ttc')
+          .order('total_sold', { ascending: false })
+          .limit(5)
+      );
 
       if (error) {
         console.error('[useTopProducts] Supabase error:', error);

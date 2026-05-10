@@ -16,6 +16,8 @@ import {
   Percent,
   LogOut,
   Moon,
+  RefreshCw,
+  WifiOff,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
@@ -41,8 +43,6 @@ function Section({ icon, title, children }: SectionProps) {
   );
 }
 
-// ─── Skeleton loading state ────────────────────────────────────────────────────
-
 function SettingsSkeleton() {
   return (
     <div className="mx-auto max-w-lg px-4 py-6 space-y-3">
@@ -53,11 +53,27 @@ function SettingsSkeleton() {
   );
 }
 
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border/40 bg-card p-12 text-center shadow-sm">
+      <WifiOff className="h-7 w-7 text-muted-foreground" />
+      <div>
+        <p className="font-semibold text-foreground">Connexion interrompue</p>
+        <p className="mt-1 text-sm text-muted-foreground">Réessayez.</p>
+      </div>
+      <Button onClick={onRetry} variant="outline" className="rounded-xl">
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Réessayer
+      </Button>
+    </div>
+  );
+}
+
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const { logout } = useAuth();
-  const { settings, isLoading, updateSetting } = useSettings();
+  const { settings, isLoading, isError, refetch, updateSetting } = useSettings();
   const { theme, setTheme } = useTheme();
   const [shopName, setShopName] = useState('');
   const [threshold, setThreshold] = useState('5');
@@ -79,6 +95,14 @@ export default function SettingsPage() {
   };
 
   if (isLoading) return <SettingsSkeleton />;
+
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-6">
+        <ErrorState onRetry={() => refetch()} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6 space-y-3">
@@ -148,7 +172,6 @@ export default function SettingsPage() {
           />
         </div>
       </Section>
-
 
       {/* Save */}
       <Button

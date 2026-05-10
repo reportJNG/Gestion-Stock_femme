@@ -13,10 +13,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PackageSearch, Plus, Search } from 'lucide-react';
+import { PackageSearch, Plus, RefreshCw, Search, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useMounted } from '@/hooks/useMounted';
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border/40 bg-card p-12 text-center shadow-sm">
+      <WifiOff className="h-7 w-7 text-muted-foreground" />
+      <div>
+        <p className="font-semibold text-foreground">Connexion interrompue</p>
+        <p className="mt-1 text-sm text-muted-foreground">Réessayez.</p>
+      </div>
+      <Button onClick={onRetry} variant="outline" className="rounded-xl">
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Réessayer
+      </Button>
+    </div>
+  );
+}
 
 export default function ProductsPage() {
   const mounted = useMounted();
@@ -25,7 +41,7 @@ export default function ProductsPage() {
   const [page, setPage] = useState(0);
 
   const debouncedSearch = useDebounce(search, 300);
-  const { data, isLoading } = useProducts(
+  const { data, isLoading, isError, refetch } = useProducts(
     debouncedSearch,
     categoryId === 'all' ? undefined : categoryId,
     page
@@ -101,6 +117,8 @@ export default function ProductsPage() {
             <Skeleton key={i} className="h-[280px] rounded-2xl bg-rose-light/20" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : !data?.products || data.products.length === 0 ? (
         /* Empty state */
         <div className="rose-empty-state">

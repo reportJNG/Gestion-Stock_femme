@@ -7,10 +7,9 @@ import { useSettings } from '@/hooks/useSettings';
 import { QuickStockIn } from '@/components/stock/QuickStockIn';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, RefreshCw, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
-
-// ─── Sub-components ────────────────────────────────────────────────────────────
 
 function StockSkeleton() {
   return (
@@ -22,12 +21,30 @@ function StockSkeleton() {
   );
 }
 
-// ─── Main page ─────────────────────────────────────────────────────────────────
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-rose-soft/20 bg-white/80 p-12 text-center shadow-sm">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-light/40 text-primary">
+        <WifiOff className="h-7 w-7" />
+      </div>
+      <div>
+        <p className="font-semibold text-foreground">Connexion interrompue</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Impossible de charger les produits. Réessayez.
+        </p>
+      </div>
+      <Button onClick={onRetry} variant="outline" className="rounded-xl">
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Réessayer
+      </Button>
+    </div>
+  );
+}
 
 export default function StockPage() {
   const [search, setSearch] = useState('');
 
-  const { data, isLoading } = useProducts(search);
+  const { data, isLoading, isError, refetch } = useProducts(search);
   const { addStock } = useVariants();
   const { settings } = useSettings();
 
@@ -41,8 +58,6 @@ export default function StockPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 space-y-5">
-
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
         <Input
@@ -53,9 +68,10 @@ export default function StockPage() {
         />
       </div>
 
-      {/* Content */}
       {isLoading ? (
         <StockSkeleton />
+      ) : isError ? (
+        <ErrorState onRetry={() => refetch()} />
       ) : (
         <QuickStockIn
           products={data?.products ?? []}
