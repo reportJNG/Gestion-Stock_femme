@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { StockBadge } from '@/components/products/StockBadge';
-import { Plus, Package, ChevronDown, Loader2, Sparkles } from 'lucide-react';
+import { Plus, Minus, Package, ChevronDown, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ProductItem {
@@ -26,10 +26,11 @@ interface ProductItem {
 interface QuickStockInProps {
   products: ProductItem[];
   onAddStock: (variantId: string, quantity: number) => Promise<void>;
+  onRemoveStock: (variantId: string, quantity: number) => Promise<void>;
   lowStockThreshold?: number;
 }
 
-export function QuickStockIn({ products, onAddStock, lowStockThreshold }: QuickStockInProps) {
+export function QuickStockIn({ products, onAddStock, onRemoveStock, lowStockThreshold }: QuickStockInProps) {
   const { isAdmin } = useAuth(); // ✅ Only check if admin
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
@@ -37,13 +38,17 @@ export function QuickStockIn({ products, onAddStock, lowStockThreshold }: QuickS
   const [successVariant, setSuccessVariant] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const handleAddStock = async (variantId: string) => {
+  const handleStockChange = async (variantId: string, mode: 'add' | 'remove') => {
     const qty = parseInt(quantities[variantId] || '0');
     if (qty <= 0) return;
 
     setSubmitting(variantId);
     try {
-      await onAddStock(variantId, qty);
+      if (mode === 'add') {
+        await onAddStock(variantId, qty);
+      } else {
+        await onRemoveStock(variantId, qty);
+      }
       setQuantities((prev) => ({ ...prev, [variantId]: '' }));
       setSuccessVariant(variantId);
       setTimeout(() => setSuccessVariant(null), 1800);
@@ -51,6 +56,9 @@ export function QuickStockIn({ products, onAddStock, lowStockThreshold }: QuickS
       setSubmitting(null);
     }
   };
+
+  const handleAddStock = (variantId: string) => handleStockChange(variantId, 'add');
+  const handleRemoveStock = (variantId: string) => handleStockChange(variantId, 'remove');
 
   const handleKeyDown = (e: React.KeyboardEvent, variantId: string) => {
     if (e.key === 'Enter') handleAddStock(variantId);
@@ -241,6 +249,41 @@ export function QuickStockIn({ products, onAddStock, lowStockThreshold }: QuickS
                           />
 
                           <button
+                            type="button"
+                            aria-label="Retirer du stock"
+                            title="Retirer du stock"
+                            onClick={() => handleRemoveStock(variant.id)}
+                            disabled={isSubmitting || !isValid || variant.quantity <= 0}
+                            className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{
+                              background:
+                                isValid && !isSubmitting && variant.quantity > 0
+                                  ? 'linear-gradient(135deg, #64748b, #475569)'
+                                  : '#f3f4f6',
+                              boxShadow:
+                                isValid && !isSubmitting && variant.quantity > 0
+                                  ? '0 2px 8px rgba(71,85,105,0.22)'
+                                  : 'none',
+                            }}
+                          >
+                            {isSubmitting ? (
+                              <Loader2
+                                className="h-3.5 w-3.5 animate-spin"
+                                style={{ color: isValid ? 'white' : '#9ca3af' }}
+                              />
+                            ) : (
+                              <Minus
+                                className="h-3.5 w-3.5 transition-colors"
+                                style={{ color: isValid && variant.quantity > 0 ? 'white' : '#9ca3af' }}
+                                strokeWidth={2.5}
+                              />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            aria-label="Ajouter du stock"
+                            title="Ajouter du stock"
                             onClick={() => handleAddStock(variant.id)}
                             disabled={isSubmitting || !isValid}
                             className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"

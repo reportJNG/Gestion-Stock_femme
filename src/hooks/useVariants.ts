@@ -45,6 +45,59 @@ const supabase = supabaseClient;
     },
   });
 
+  const removeStock = useMutation({
+    mutationFn: async ({
+      variantId,
+      quantity,
+    }: {
+      variantId: string;
+      quantity: number;
+    }) => {
+      if (quantity <= 0) {
+        throw new Error('La quantite doit etre superieure a 0');
+      }
+
+      const { data: variant, error: selectError } = await supabase
+        .from('product_variants')
+        .select('quantity, is_archived')
+        .eq('id', variantId)
+        .single();
+
+      if (selectError) throw selectError;
+      if (!variant) throw new Error('Variant introuvable');
+      if (variant.is_archived) {
+        throw new Error('Impossible de retirer du stock a un article archive');
+      }
+
+      const currentQuantity = Number(variant.quantity ?? 0);
+      const nextQuantity = Math.max(0, currentQuantity - quantity);
+
+      const { error: updateError } = await supabase
+        .from('product_variants')
+        .update({
+          quantity: nextQuantity,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', variantId);
+
+      if (updateError) throw updateError;
+
+      return {
+        success: true,
+        variant_id: variantId,
+        quantity_before: currentQuantity,
+        quantity_removed: currentQuantity - nextQuantity,
+        quantity_after: nextQuantity,
+      };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock-items'] });
+    },
+  });
+
   const archiveVariant = useMutation({
     mutationFn: async (variantId: string) => {
       const { data, error } = await supabase.rpc('archive_variant', {
@@ -118,5 +171,5 @@ const supabase = supabaseClient;
     },
   });
 
-  return { addStock, archiveVariant, unarchiveVariant };
+  return { addStock, removeStock, archiveVariant, unarchiveVariant };
 }

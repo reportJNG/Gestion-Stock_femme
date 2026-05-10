@@ -45,7 +45,7 @@ export default function StockPage() {
   const [search, setSearch] = useState('');
 
   const { data, isLoading, isError, refetch } = useProducts(search);
-  const { addStock } = useVariants();
+  const { addStock, removeStock } = useVariants();
   const { settings } = useSettings();
 
   const handleAddStock = useCallback(
@@ -54,6 +54,15 @@ export default function StockPage() {
       toast.success(`${quantity} unité${quantity > 1 ? 's' : ''} ajoutée${quantity > 1 ? 's' : ''}`);
     },
     [addStock]
+  );
+
+  const handleRemoveStock = useCallback(
+    async (variantId: string, quantity: number) => {
+      const result = await removeStock.mutateAsync({ variantId, quantity });
+      const removed = result.quantity_removed;
+      toast.success(`${removed} unité${removed > 1 ? 's' : ''} retirée${removed > 1 ? 's' : ''}`);
+    },
+    [removeStock]
   );
 
   return (
@@ -76,6 +85,7 @@ export default function StockPage() {
         <QuickStockIn
           products={data?.products ?? []}
           onAddStock={handleAddStock}
+          onRemoveStock={handleRemoveStock}
           lowStockThreshold={settings?.low_stock_threshold}
         />
       )}

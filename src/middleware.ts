@@ -1,15 +1,41 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import type { CookieOptions, SetAllCookies } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next({
+  let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
   const { pathname } = request.nextUrl;
+
+  const redirectWithAuthCookies = (path: string) => {
+    const redirectResponse = NextResponse.redirect(new URL(path, request.url));
+
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie);
+    });
+
+    return redirectResponse;
+  };
+
+  const clearSupabaseAuthCookies = () => {
+    request.cookies
+      .getAll()
+      .filter((cookie) => cookie.name.startsWith('sb-') && cookie.name.includes('auth-token'))
+      .forEach((cookie) => {
+        request.cookies.delete(cookie.name);
+        response.cookies.set({
+          name: cookie.name,
+          value: '',
+          maxAge: 0,
+          path: '/',
+        });
+      });
+  };
 
   // Allow API routes
   if (pathname.startsWith('/api')) {
@@ -29,30 +55,26 @@ export async function middleware(request: NextRequest) {
     supabaseAnonKey,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-
-        set(
-          name: string,
-          value: string,
-          options: Record<string, unknown>
-        ) {
-          response.cookies.set({
-            name,
-            value,
-            ...(options as object),
+        setAll(cookiesToSet: Parameters<SetAllCookies>[0]) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
           });
-        },
 
-        remove(
-          name: string,
-          options: Record<string, unknown>
-        ) {
-          response.cookies.set({
-            name,
-            value: '',
-            ...(options as object),
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set({
+              name,
+              value,
+              ...(options as CookieOptions),
+            });
           });
         },
       },
@@ -60,29 +82,30 @@ export async function middleware(request: NextRequest) {
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    clearSupabaseAuthCookies();
+  }
 
   // LOGIN PAGE
   if (pathname.startsWith('/connexion')) {
-    if (session) {
+    if (user) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single();
 
       // Worker redirect
       if (profile?.role === 'worker') {
-        return NextResponse.redirect(
-          new URL('/scanner', request.url)
-        );
+        return redirectWithAuthCookies('/scanner');
       }
 
       // Admin redirect
-      return NextResponse.redirect(
-        new URL('/tableau-de-bord', request.url)
-      );
+      return redirectWithAuthCookies('/tableau-de-bord');
     }
 
     return response;
@@ -90,43 +113,35 @@ export async function middleware(request: NextRequest) {
 
   // ROOT
   if (pathname === '/') {
-    if (!session) {
-      return NextResponse.redirect(
-        new URL('/connexion', request.url)
-      );
+    if (!user) {
+      return redirectWithAuthCookies('/connexion');
     }
 
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single();
 
     // Worker root redirect
     if (profile?.role === 'worker') {
-      return NextResponse.redirect(
-        new URL('/scanner', request.url)
-      );
+      return redirectWithAuthCookies('/scanner');
     }
 
     // Admin root redirect
-    return NextResponse.redirect(
-      new URL('/tableau-de-bord', request.url)
-    );
+    return redirectWithAuthCookies('/tableau-de-bord');
   }
 
   // PROTECTED ROUTES
-  if (!session) {
-    return NextResponse.redirect(
-      new URL('/connexion', request.url)
-    );
+  if (!user) {
+    return redirectWithAuthCookies('/connexion');
   }
 
   // CHECK PROFILE
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, is_active')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single();
 
   // Invalid profile
@@ -136,9 +151,7 @@ export async function middleware(request: NextRequest) {
   ) {
     await supabase.auth.signOut();
 
-    return NextResponse.redirect(
-      new URL('/connexion', request.url)
-    );
+    return redirectWithAuthCookies('/connexion');
   }
 
   // Invalid role
@@ -148,9 +161,7 @@ export async function middleware(request: NextRequest) {
   ) {
     await supabase.auth.signOut();
 
-    return NextResponse.redirect(
-      new URL('/connexion', request.url)
-    );
+    return redirectWithAuthCookies('/connexion');
   }
 
   // WORKER ACCESS CONTROL
@@ -168,9 +179,7 @@ export async function middleware(request: NextRequest) {
 
     // Block unauthorized pages
     if (!isAllowed) {
-      return NextResponse.redirect(
-        new URL('/scanner', request.url)
-      );
+      return redirectWithAuthCookies('/scanner');
     }
   }
 
