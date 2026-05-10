@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { Html5Qrcode, CameraDevice } from 'html5-qrcode';
-import { CameraOff, CameraIcon, AlertCircle, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Html5Qrcode, type CameraDevice } from 'html5-qrcode';
+import { AlertCircle, CameraIcon, CameraOff, Loader2 } from 'lucide-react';
+
+type ScannerStatus = 'loading' | 'active' | 'error' | 'permission-denied';
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -13,101 +15,162 @@ interface BarcodeScannerProps {
 export function BarcodeScanner({ onScan, onError, className }: BarcodeScannerProps) {
   const readerRef = useRef<HTMLDivElement>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const [status, setStatus] = useState<'loading' | 'active' | 'error' | 'permission-denied'>('loading');
-  const [cameras, setCameras] = useState<CameraDevice[]>([]);
-  const [currentCamera, setCurrentCamera] = useState<string>('');
-
-  // ✅ Use refs for dedup — no stale closure issue
+  const currentCameraRef = useRef('');
+  const isMountedRef = useRef(false);
   const lastScanRef = useRef<string | null>(null);
-  const scanTimeoutRef = useRef<NodeJS.Timeout>();
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const initializedRef = useRef(false);
-
-  // ✅ Keep latest onScan in a ref so the scanner callback never goes stale
   const onScanRef = useRef(onScan);
-  useEffect(() => { onScanRef.current = onScan; }, [onScan]);
+  const onErrorRef = useRef(onError);
+
+  const [status, setStatus] = useState<ScannerStatus>('loading');
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
+
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  const setStatusIfMounted = useCallback((nextStatus: ScannerStatus) => {
+    if (isMountedRef.current) setStatus(nextStatus);
+  }, []);
+
+  const setCurrentCameraIfMounted = useCallback((cameraId: string) => {
+    currentCameraRef.current = cameraId;
+  }, []);
+
+  const stopScanner = useCallback(async () => {
+    const scanner = scannerRef.current;
+    scannerRef.current = null;
+
+    if (scanner) {
+      try {
+        if (scanner.isScanning) await scanner.stop();
+      } catch {}
+
+      try {
+        scanner.clear();
+      } catch {}
+    }
+
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+      scanTimeoutRef.current = undefined;
+    }
+  }, []);
 
   const getCameras = useCallback(async () => {
     try {
       const devices = await Html5Qrcode.getCameras();
+      if (!isMountedRef.current) return devices;
+
       setCameras(devices);
-      if (devices.length > 0) setCurrentCamera(devices[0].id);
+      if (devices.length > 0) setCurrentCameraIfMounted(devices[0].id);
+
       return devices;
     } catch {
-      setStatus('permission-denied');
+      setStatusIfMounted('permission-denied');
       return [];
     }
-  }, []);
+  }, [setCurrentCameraIfMounted, setStatusIfMounted]);
 
-  const stopScanner = useCallback(async () => {
-    if (scannerRef.current?.isScanning) {
-      try { await scannerRef.current.stop(); scannerRef.current.clear(); } catch {}
-    }
-    scannerRef.current = null;
-    if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-  }, []);
+  const startScanner = useCallback(
+    async (cameraId?: string) => {
+      if (!readerRef.current || !isMountedRef.current) return;
 
-  const startScanner = useCallback(async (cameraId?: string) => {
-    if (!readerRef.current) return;
-    try {
-      if (scannerRef.current) await stopScanner();
-      const scanner = new Html5Qrcode('scanner-reader');
-      scannerRef.current = scanner;
-      const targetCamera = cameraId || currentCamera;
-      await scanner.start(
-        targetCamera ? { deviceId: { exact: targetCamera } } : { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: (w: number, h: number) => {
-            const min = Math.min(w, h);
-            const s = Math.floor(min * 0.7);
-            return { width: s, height: s * 0.6 };
+      try {
+        if (scannerRef.current) await stopScanner();
+
+        const scanner = new Html5Qrcode('scanner-reader');
+        scannerRef.current = scanner;
+
+        const targetCamera = cameraId || currentCameraRef.current;
+
+        await scanner.start(
+          targetCamera ? { deviceId: { exact: targetCamera } } : { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: (width: number, height: number) => {
+              const min = Math.min(width, height);
+              const size = Math.floor(min * 0.7);
+              return { width: size, height: size * 0.6 };
+            },
+            aspectRatio: 1.777,
           },
-          aspectRatio: 1.777,
-        },
-        (decodedText) => {
-          // ✅ Dedup via ref — always fresh, no stale closure
-          if (lastScanRef.current === decodedText) return;
-          lastScanRef.current = decodedText;
-          if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-          scanTimeoutRef.current = setTimeout(() => { lastScanRef.current = null; }, 2000);
-          // ✅ Call via ref — always latest onScan, no toast here (page.tsx handles it)
-          onScanRef.current(decodedText);
-        },
-        () => {}
-      );
-      setStatus('active');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Échec';
-      setStatus('error');
-      onError?.(message);
-    }
-  }, [currentCamera, onError, stopScanner]);
+          (decodedText) => {
+            if (lastScanRef.current === decodedText) return;
+
+            lastScanRef.current = decodedText;
+            if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+
+            scanTimeoutRef.current = setTimeout(() => {
+              lastScanRef.current = null;
+            }, 2000);
+
+            onScanRef.current(decodedText);
+          },
+          () => {}
+        );
+
+        if (!isMountedRef.current) {
+          await stopScanner();
+          return;
+        }
+
+        setStatusIfMounted('active');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Echec';
+        setStatusIfMounted('error');
+        onErrorRef.current?.(message);
+      }
+    },
+    [setStatusIfMounted, stopScanner]
+  );
 
   const switchCamera = useCallback(async () => {
     if (cameras.length < 2) return;
-    const idx = cameras.findIndex(c => c.id === currentCamera);
-    const next = cameras[(idx + 1) % cameras.length];
-    setCurrentCamera(next.id);
-    setStatus('loading');
-    await startScanner(next.id);
-  }, [cameras, currentCamera, startScanner]);
+
+    const index = cameras.findIndex((camera) => camera.id === currentCameraRef.current);
+    const nextCamera = cameras[(index + 1) % cameras.length];
+
+    setCurrentCameraIfMounted(nextCamera.id);
+    setStatusIfMounted('loading');
+    await startScanner(nextCamera.id);
+  }, [cameras, setCurrentCameraIfMounted, setStatusIfMounted, startScanner]);
 
   const retryScan = useCallback(async () => {
-    setStatus('loading');
-    const devices = await getCameras();
-    if (devices.length > 0) await startScanner(devices[0].id);
-  }, [getCameras, startScanner]);
+    setStatusIfMounted('loading');
 
-  // ✅ Run once via ref flag — no missing deps warning, no restart loop
+    const devices = await getCameras();
+    if (isMountedRef.current && devices.length > 0) {
+      await startScanner(devices[0].id);
+    }
+  }, [getCameras, setStatusIfMounted, startScanner]);
+
   useEffect(() => {
     if (initializedRef.current) return;
+
     initializedRef.current = true;
+    isMountedRef.current = true;
+    let cancelled = false;
+
     const init = async () => {
       const devices = await getCameras();
-      if (devices.length > 0) await startScanner(devices[0].id);
+      if (!cancelled && devices.length > 0) {
+        await startScanner(devices[0].id);
+      }
     };
+
     init();
-    return () => { stopScanner(); };
+
+    return () => {
+      cancelled = true;
+      isMountedRef.current = false;
+      stopScanner();
+    };
   }, [getCameras, startScanner, stopScanner]);
 
   return (
@@ -115,7 +178,6 @@ export function BarcodeScanner({ onScan, onError, className }: BarcodeScannerPro
       <div className="relative rounded-2xl overflow-hidden bg-black/90 shadow-xl ring-1 ring-rose-soft/20">
         <div id="scanner-reader" ref={readerRef} className="aspect-[4/3] w-full" />
 
-        {/* scan guide */}
         {status === 'active' && (
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-[12.5%] left-[12.5%] right-[12.5%] bottom-[12.5%]">
@@ -131,24 +193,32 @@ export function BarcodeScanner({ onScan, onError, className }: BarcodeScannerPro
         {status === 'loading' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white gap-2">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm">Démarrage caméra...</p>
+            <p className="text-sm">Demarrage camera...</p>
           </div>
         )}
+
         {status === 'permission-denied' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white p-6 gap-3">
             <CameraOff className="w-8 h-8 text-red-400" />
-            <p className="text-sm font-medium">Accès caméra refusé</p>
-            <button onClick={retryScan} className="mt-2 px-4 py-2 text-xs bg-primary/20 hover:bg-primary/30 rounded-xl transition-colors">
-              Réessayer
+            <p className="text-sm font-medium">Acces camera refuse</p>
+            <button
+              onClick={retryScan}
+              className="mt-2 px-4 py-2 text-xs bg-primary/20 hover:bg-primary/30 rounded-xl transition-colors"
+            >
+              Reessayer
             </button>
           </div>
         )}
+
         {status === 'error' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white p-6 gap-3">
             <AlertCircle className="w-8 h-8 text-amber-400" />
-            <p className="text-sm font-medium">Erreur caméra</p>
-            <button onClick={retryScan} className="mt-2 px-4 py-2 text-xs bg-primary/20 hover:bg-primary/30 rounded-xl transition-colors">
-              Réessayer
+            <p className="text-sm font-medium">Erreur camera</p>
+            <button
+              onClick={retryScan}
+              className="mt-2 px-4 py-2 text-xs bg-primary/20 hover:bg-primary/30 rounded-xl transition-colors"
+            >
+              Reessayer
             </button>
           </div>
         )}

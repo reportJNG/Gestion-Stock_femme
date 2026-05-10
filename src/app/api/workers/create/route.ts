@@ -3,6 +3,20 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+type CookieOptions = {
+  domain?: string;
+  expires?: Date;
+  httpOnly?: boolean;
+  maxAge?: number;
+  path?: string;
+  sameSite?: boolean | "lax" | "strict" | "none";
+  secure?: boolean;
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Erreur serveur interne";
+}
+
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -16,16 +30,21 @@ function getAdminClient() {
 
 function getServerClient() {
   const cookieStore = cookies();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing");
+  }
+
   return createServerClient(url, key, {
     cookies: {
       get(name: string) { return cookieStore.get(name)?.value; },
       set(name: string, value: string, options: Record<string, unknown>) {
-        try { cookieStore.set({ name, value, ...options } as any); } catch {}
+        try { cookieStore.set({ name, value, ...(options as CookieOptions) }); } catch {}
       },
       remove(name: string, options: Record<string, unknown>) {
-        try { cookieStore.set({ name, value: "", ...options } as any); } catch {}
+        try { cookieStore.set({ name, value: "", ...(options as CookieOptions) }); } catch {}
       },
     },
   });
@@ -78,21 +97,17 @@ export async function POST(req: NextRequest) {
 
     const userId = authData.user.id;
 
-    // 4. Wait for the handle_new_user trigger to create the profile row
-    await new Promise((r) => setTimeout(r, 1000));
-
-    // 5. UPDATE (not upsert) the existing profile row the trigger created
-    //    with the extra worker fields
     const { data: profile, error: updateError } = await admin
       .from("profiles")
-      .update({
+      .upsert({
+        id: userId,
+        email,
         full_name,
         role: "worker",
         phone: phone || null,
         commission_rate: commission_rate ?? 0,
         is_active: is_active ?? true,
-      })
-      .eq("id", userId)
+      }, { onConflict: "id" })
       .select()
       .single();
 
@@ -107,10 +122,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ worker: profile }, { status: 201 });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[/api/workers/create]", err);
     return NextResponse.json(
-      { error: err?.message || "Erreur serveur interne" },
+      { error: getErrorMessage(err) },
       { status: 500 }
     );
   }

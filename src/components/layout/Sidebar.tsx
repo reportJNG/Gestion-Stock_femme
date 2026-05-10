@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Package, ClipboardList, ScanLine,
   Receipt, BarChart3, Archive, Settings, LogOut,Users,
@@ -23,13 +23,13 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { logout, role, isLoading } = useAuth();
   const filtered = role ? navItems.filter((item) => item.roles.includes(role)) : [];
 
   const handleLogout = async () => {
     await logout();
-    // ✅ Hard navigation — clears all React state, ensures clean session teardown
-    window.location.href = '/connexion';
+    router.replace('/connexion');
   };
 
   return (

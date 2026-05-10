@@ -25,9 +25,13 @@ export interface ReportData {
 }
 
 type XlsxCell = { v: string | number; t: string; s: CellStyle; z?: string };
+type XlsxWorksheet = XLSX.WorkSheet;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type XlsxWorksheet = Record<string, XlsxCell | any>;
+type JsPDFWithAutoTable = jsPDF & {
+  lastAutoTable?: {
+    finalY: number;
+  };
+};
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +82,9 @@ const MARGIN    = 14;
 
 function pdfPageWidth(doc: jsPDF) { return doc.internal.pageSize.width; }
 function pdfPageHeight(doc: jsPDF) { return doc.internal.pageSize.height; }
+function lastTableY(doc: jsPDF, fallback: number) {
+  return (doc as JsPDFWithAutoTable).lastAutoTable?.finalY ?? fallback;
+}
 
 function drawHeader(doc: jsPDF, periodLabel: string) {
   const pw = pdfPageWidth(doc);
@@ -219,8 +226,7 @@ export async function exportToPDF(data: ReportData, periodLabel: string) {
       didDrawPage: () => { drawHeader(doc, periodLabel); },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = lastTableY(doc, y) + 10;
 
     if (y > pdfPageHeight(doc) - 80) { doc.addPage(); drawHeader(doc, periodLabel); y = HEADER_H + 8; }
     y = drawSectionTitle(doc, 'Top Produits', y);
@@ -260,8 +266,7 @@ export async function exportToPDF(data: ReportData, periodLabel: string) {
       didDrawPage: () => { drawHeader(doc, periodLabel); },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = lastTableY(doc, y) + 10;
 
     if (y > pdfPageHeight(doc) - 40) { doc.addPage(); drawHeader(doc, periodLabel); y = HEADER_H + 8; }
     drawRule(doc, y);

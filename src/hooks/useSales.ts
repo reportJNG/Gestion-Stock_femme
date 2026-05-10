@@ -22,10 +22,10 @@ function endOfDay(date: string): string {
 
 export function useSales(from?: string, to?: string, page: number = 0) {
   const supabase = supabaseClient;
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   return useQuery({
-    queryKey: ['sales', from, to, page, user?.id],
+    queryKey: ['sales', from, to, page, user?.id, isAdmin],
     enabled: !!user,
     retry: 2,
     retryDelay: 2000,
@@ -39,7 +39,7 @@ export function useSales(from?: string, to?: string, page: number = 0) {
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
 
-      if (user?.id) request = request.eq('sold_by', user.id);
+      if (!isAdmin && user?.id) request = request.eq('sold_by', user.id);
       if (from) request = request.gte('created_at', startOfDay(from));
       if (to) request = request.lte('created_at', endOfDay(to));
 
@@ -70,10 +70,10 @@ export function useSales(from?: string, to?: string, page: number = 0) {
 
 export function useSaleDetail(saleId: string) {
   const supabase = supabaseClient;
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   return useQuery({
-    queryKey: ['sale', saleId, user?.id],
+    queryKey: ['sale', saleId, user?.id, isAdmin],
     enabled: !!saleId && !!user,
     retry: 1,
     retryDelay: 2000,
@@ -94,8 +94,8 @@ export function useSaleDetail(saleId: string) {
 
       if (!sale) return null;
 
-      if (sale.sold_by !== user?.id) {
-        throw new Error('You can only view your own sales');
+      if (!isAdmin && sale.sold_by !== user?.id) {
+        throw new Error('SALE_ACCESS_DENIED');
       }
 
       const { data: items, error: itemsError } = await withTimeout(
@@ -126,7 +126,6 @@ export function useSaleDetail(saleId: string) {
             customer_name: sale.customer_name || '',
             sold_by_name: soldByName,
             created_at: sale.created_at,
-            synced_from_offline: sale.synced_from_offline || false,
           },
           items: (items || []).map((item) => ({
             id: item.id,

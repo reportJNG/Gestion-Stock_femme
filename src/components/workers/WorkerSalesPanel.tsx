@@ -90,7 +90,7 @@ function StatCard({
 }
 
 // Mobile sale card
-function SaleMobileCard({ sale, index }: { sale: WorkerSale; index: number }) {
+function SaleMobileCard({ sale }: { sale: WorkerSale }) {
   return (
     <div className="p-4 border-b last:border-b-0">
       <div className="flex items-start justify-between gap-3 mb-2">
@@ -296,8 +296,8 @@ export function WorkerSalesPanel({ workerId }: WorkerSalesPanelProps) {
               <p className="text-sm text-muted-foreground">Aucune vente pour cette période</p>
             </div>
           ) : (
-            sales.map((sale, idx) => (
-              <SaleMobileCard key={sale.id} sale={sale} index={page * pageSize + idx} />
+            sales.map((sale) => (
+              <SaleMobileCard key={sale.id} sale={sale} />
             ))
           )}
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabaseClient } from '@/lib/supabase/client';
 import { withTimeout } from '@/lib/supabase/withTimeout';
 
@@ -22,7 +22,24 @@ function daysAgo(n: number): string {
   }).format(d);
 }
 
-function num(v: any): number {
+type DailyStatsRow = {
+  sale_date: string;
+  revenue_ttc: number | string | null;
+  profit_ht: number | string | null;
+  units_sold?: number | string | null;
+};
+
+type StockValueRow = {
+  total_sale_value_ttc: number | string | null;
+};
+
+type TopProductRow = {
+  product_name: string;
+  total_sold: number | string | null;
+  total_revenue_ttc: number | string | null;
+};
+
+function num(v: unknown): number {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
 }
@@ -77,7 +94,7 @@ export function useReport(period: Period) {
         .filter(Boolean);
       if (errors.length) throw errors[0];
 
-      const totalStock = (stockValue.data || []).reduce(
+      const totalStock = ((stockValue.data || []) as StockValueRow[]).reduce(
         (sum, row) => sum + num(row.total_sale_value_ttc), 0
       );
 
@@ -87,12 +104,12 @@ export function useReport(period: Period) {
         transactions: num(todayStats.data?.units_sold),
         stockValue: totalStock,
         lowStockCount: lowStock.count || 0,
-        chart: (chartData.data || []).map((d: any) => ({
+        chart: ((chartData.data || []) as DailyStatsRow[]).map((d) => ({
           name: new Date(d.sale_date).toLocaleDateString('fr-FR', { weekday: 'short' }),
           revenue: num(d.revenue_ttc),
           profit: num(d.profit_ht),
         })),
-        topProducts: (topProducts.data || []).map((p: any) => ({
+        topProducts: ((topProducts.data || []) as TopProductRow[]).map((p) => ({
           name: p.product_name,
           sold: num(p.total_sold),
           revenue: num(p.total_revenue_ttc),

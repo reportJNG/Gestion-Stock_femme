@@ -89,10 +89,6 @@ function StatsSkeleton() {
   );
 }
 
-function ChartSkeleton() {
-  return <Skeleton className="h-[240px] rounded-2xl" />;
-}
-
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border/40 bg-card p-12 text-center shadow-sm">

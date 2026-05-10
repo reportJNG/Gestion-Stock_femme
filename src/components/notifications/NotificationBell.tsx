@@ -6,7 +6,6 @@ import {
   BellOff,
   CheckCircle2,
   Info,
-  RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,8 +29,6 @@ export function NotificationBell() {
         return AlertTriangle;
       case 'sale_success':
         return CheckCircle2;
-      case 'sync_complete':
-        return RefreshCw;
       default:
         return Info;
     }

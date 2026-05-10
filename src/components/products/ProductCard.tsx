@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Package, ImageOff } from 'lucide-react';
@@ -29,9 +30,15 @@ export function ProductCard({ id, name, categoryName, brandName, priceTtc, image
     <Link href={`/produits/${id}`} className="group block h-full">
       <Card className="h-full border-rose-soft/20 bg-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
         <CardContent className="p-4">
-          <div className="aspect-square mb-3 rounded-2xl bg-gradient-to-br from-rose-light to-brand-muted/30 flex items-center justify-center overflow-hidden">
+          <div className="relative aspect-square mb-3 rounded-2xl bg-gradient-to-br from-rose-light to-brand-muted/30 flex items-center justify-center overflow-hidden">
             {imageUrl ? (
-              <img src={imageUrl} alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              <Image
+                src={imageUrl}
+                alt={name}
+                fill
+                sizes="(max-width: 768px) 50vw, 220px"
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+              />
             ) : (
               <ImageOff className="h-10 w-10 text-muted-foreground/30" />
             )}

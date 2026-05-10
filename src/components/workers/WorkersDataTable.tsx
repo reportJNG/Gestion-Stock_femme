@@ -180,7 +180,13 @@ export function WorkersDataTable() {
   const [deleteWorker, setDeleteWorker] = useState<Worker | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const { data: workers, isLoading, error } = useWorkers({ search: search || undefined });
+  const {
+    data: workers,
+    isLoading,
+    error,
+    refetch,
+    isFetching,
+  } = useWorkers({ search: search || undefined });
   const toggleActive = useToggleWorkerActive();
 
   const sortedWorkers = useMemo(() => {
@@ -292,7 +298,13 @@ export function WorkersDataTable() {
                         <Alert variant="destructive" className="rounded-xl max-w-xs">
                           <AlertDescription>Impossible de charger les travailleurs.</AlertDescription>
                         </Alert>
-                        <Button variant="outline" size="sm" className="rounded-lg" onClick={() => window.location.reload()}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg"
+                          onClick={() => refetch()}
+                          disabled={isFetching}
+                        >
                           Réessayer
                         </Button>
                       </div>
@@ -409,7 +421,13 @@ export function WorkersDataTable() {
               <div className="p-6 text-center">
                 <AlertTriangle className="h-8 w-8 text-destructive/60 mx-auto mb-3" />
                 <p className="text-sm text-destructive">Impossible de charger les travailleurs.</p>
-                <Button variant="outline" size="sm" className="rounded-lg mt-3" onClick={() => window.location.reload()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg mt-3"
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                >
                   Réessayer
                 </Button>
               </div>

@@ -11,6 +11,10 @@ import { useDeleteWorker } from "@/hooks/useWorkers";
 import type { Worker } from "@/hooks/useWorkers";
 import { useState } from "react";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Une erreur est survenue lors de la suppression";
+}
+
 interface DeleteWorkerDialogProps {
   worker: Worker;
   trigger?: React.ReactNode;
@@ -33,8 +37,8 @@ export function DeleteWorkerDialog({
       await deleteWorker.mutateAsync(worker.id);
       onOpenChange?.(false);
       onSuccess?.();
-    } catch (err: any) {
-      setError(err?.message || "Une erreur est survenue lors de la suppression");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   }
 

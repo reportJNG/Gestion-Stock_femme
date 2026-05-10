@@ -176,7 +176,7 @@ async function fetchWorkerSales(
   const { data, error, count } = await withTimeout(query);
   if (error) throw new Error(error.message);
 
-  const sales = (data || []).map((sale: any) => ({
+  const sales = ((data || []) as WorkerSale[]).map((sale) => ({
     ...sale,
     items_count: sale.sale_items?.[0]?.count || 0,
   }));

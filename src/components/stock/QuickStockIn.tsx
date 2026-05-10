@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { StockBadge } from '@/components/products/StockBadge';
@@ -114,10 +115,12 @@ export function QuickStockIn({ products, onAddStock, lowStockThreshold }: QuickS
                 }}
               >
                 {product.image_url ? (
-                  <img
+                  <Image
                     src={product.image_url}
                     alt=""
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="44px"
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">

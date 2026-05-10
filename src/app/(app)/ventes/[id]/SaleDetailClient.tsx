@@ -119,7 +119,7 @@ export function SaleDetailClient() {
   // Handle errors (including permission denied)
   if (error) {
     console.error('Sale detail error:', error);
-    if (error.message === 'You do not have permission to view this sale') {
+    if (error.message === 'SALE_ACCESS_DENIED') {
       return <AccessDenied />;
     }
     return <NotFound />;
@@ -180,11 +180,6 @@ export function SaleDetailClient() {
               <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(sale.created_at)}</p>
             </div>
           </div>
-          {sale.synced_from_offline && (
-            <span className="rounded-full border border-border/40 bg-muted px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Sync offline
-            </span>
-          )}
         </div>
 
         <Separator className="my-4 opacity-50" />

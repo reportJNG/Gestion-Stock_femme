@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useProductDetail } from '@/hooks/useProducts';
 import { useVariants } from '@/hooks/useVariants';
@@ -24,6 +25,14 @@ import { formatDZD } from '@/lib/utils';
 
 import { openPrintWindow } from '@/lib/print/printService';
 import { generateLabelsGridHTML, LABEL_STYLES, type LabelData } from '@/lib/print/labelTemplate';
+
+type PrintableVariant = {
+  barcode: string;
+  color_name?: string;
+  color?: { name_fr?: string };
+  is_archived: boolean;
+  size: string;
+};
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
@@ -63,18 +72,18 @@ export function ProductDetailClient() {
     if (!data?.data) return;
 
     const { product, variants } = data.data;
-    const printableVariants = variants.filter((v: any) => !v.is_archived);
+    const printableVariants = variants.filter((variant: PrintableVariant) => !variant.is_archived);
 
     if (printableVariants.length === 0) {
       toast.warning('Aucun variant actif à imprimer');
       return;
     }
 
-    const labels: LabelData[] = printableVariants.map((variant: any) => ({
+    const labels: LabelData[] = printableVariants.map((variant: PrintableVariant) => ({
       barcode:     variant.barcode,
       productName: product.name,
       brandName:   product.brand?.name,
-      colorName:   variant.color?.name_fr,
+      colorName:   variant.color_name ?? variant.color?.name_fr,
       size:        variant.size,
       priceTTC:    product.price_ttc ?? product.sale_price,
     }));
@@ -149,7 +158,13 @@ export function ProductDetailClient() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex h-40 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted sm:w-40">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                <Image
+                  src={product.image_url}
+                  alt={product.name}
+                  width={160}
+                  height={160}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <ImageOff className="h-10 w-10 text-muted-foreground stroke-[1.8]" />
               )}

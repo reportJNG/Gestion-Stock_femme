@@ -62,7 +62,6 @@ export type Sale = {
   customer_name?: string;
   sold_by?: string;
   sold_by_name?: string;
-  synced_from_offline: boolean;
   created_at: string;
   items?: SaleItem[];
 };
@@ -85,7 +84,7 @@ export type SaleItem = {
 
 export type Notification = {
   id: string;
-  type: 'low_stock' | 'out_of_stock' | 'sale_success' | 'sync_complete' | 'error' | 'info';
+  type: 'low_stock' | 'out_of_stock' | 'sale_success' | 'error' | 'info';
   title: string;
   message: string;
   is_read: boolean;
@@ -147,5 +146,4 @@ export type SettingsMap = {
   archive_retention_days: number;
   label_width_mm: number;
   label_height_mm: number;
-  offline_sync_max_retry: number;
 };

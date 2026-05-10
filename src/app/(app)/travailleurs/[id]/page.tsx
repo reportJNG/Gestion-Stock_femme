@@ -76,7 +76,7 @@ export default function WorkerDetailPage() {
             <UserX className="h-6 w-6 text-muted-foreground" />
           </div>
           <p className="text-base font-semibold mb-1">Travailleur introuvable</p>
-          <p className="text-sm text-muted-foreground">Ce travailleur n'existe pas ou a été supprimé.</p>
+          <p className="text-sm text-muted-foreground">Ce travailleur n&apos;existe pas ou a été supprimé.</p>
         </div>
       </div>
     );

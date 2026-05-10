@@ -42,6 +42,10 @@ const editSchema = z.object({
 type CreateFormValues = z.infer<typeof createSchema>;
 type EditFormValues = z.infer<typeof editSchema>;
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Une erreur est survenue";
+}
+
 interface WorkerFormDialogProps {
   mode: "create" | "edit";
   worker?: Worker | null;
@@ -94,18 +98,29 @@ export function WorkerFormDialog({
     try {
       setError(null);
       if (isEdit && worker) {
-        await updateWorker.mutateAsync({ id: worker.id, ...values } as WorkerUpdateData);
+        await updateWorker.mutateAsync({
+          id: worker.id,
+          full_name: values.full_name,
+          phone: values.phone,
+          commission_rate: values.commission_rate,
+          is_active: values.is_active,
+        } satisfies WorkerUpdateData);
       } else {
+        const createValues = values as CreateFormValues;
         await createWorker.mutateAsync({
-          ...values,
-          phone: (values as CreateFormValues).phone || undefined,
-        } as WorkerFormData);
+          email: createValues.email,
+          password: createValues.password,
+          full_name: createValues.full_name,
+          phone: createValues.phone || undefined,
+          commission_rate: createValues.commission_rate,
+          is_active: createValues.is_active,
+        } satisfies WorkerFormData);
         form.reset();
       }
       setOpen(false);
       onSuccess?.();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Une erreur est survenue");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   }
 
@@ -279,7 +294,7 @@ export function WorkerFormDialog({
                     <div className="space-y-0.5 flex-1 min-w-0">
                       <FormLabel className="text-sm font-medium leading-none">Compte actif</FormLabel>
                       <FormDescription className="text-xs text-muted-foreground leading-relaxed">
-                        Désactivez pour bloquer l'accès sans supprimer le compte.
+                        Désactivez pour bloquer l&apos;accès sans supprimer le compte.
                       </FormDescription>
                     </div>
                     <FormControl>

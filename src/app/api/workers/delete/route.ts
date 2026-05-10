@@ -3,6 +3,20 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+type CookieOptions = {
+  domain?: string;
+  expires?: Date;
+  httpOnly?: boolean;
+  maxAge?: number;
+  path?: string;
+  sameSite?: boolean | "lax" | "strict" | "none";
+  secure?: boolean;
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Erreur serveur interne";
+}
+
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -14,16 +28,21 @@ function getAdminClient() {
 
 function getServerClient() {
   const cookieStore = cookies();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing");
+  }
+
   return createServerClient(url, key, {
     cookies: {
       get(name: string) { return cookieStore.get(name)?.value; },
       set(name: string, value: string, options: Record<string, unknown>) {
-        try { cookieStore.set({ name, value, ...options } as any); } catch {}
+        try { cookieStore.set({ name, value, ...(options as CookieOptions) }); } catch {}
       },
       remove(name: string, options: Record<string, unknown>) {
-        try { cookieStore.set({ name, value: "", ...options } as any); } catch {}
+        try { cookieStore.set({ name, value: "", ...(options as CookieOptions) }); } catch {}
       },
     },
   });
@@ -50,14 +69,16 @@ export async function DELETE(req: NextRequest) {
     }
 
     // 2. Parse body safely
-    let body: any = {};
+    let body: unknown = {};
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Corps de requête invalide" }, { status: 400 });
     }
 
-    const { id } = body;
+    const id = typeof body === "object" && body !== null && "id" in body
+      ? (body as { id?: unknown }).id
+      : undefined;
     if (!id || typeof id !== "string") {
       return NextResponse.json({ error: "id requis" }, { status: 400 });
     }
@@ -95,10 +116,10 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 200 });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[/api/workers/delete]", err);
     return NextResponse.json(
-      { error: err?.message || "Erreur serveur interne" },
+      { error: getErrorMessage(err) },
       { status: 500 }
     );
   }

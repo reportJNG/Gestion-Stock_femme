@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useScanner, type ScanResult } from '@/hooks/useScanner';
@@ -7,7 +7,7 @@ import { ManualBarcodeInput } from '@/components/scanner/ManualBarcodeInput';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Camera, History, ScanLine, CheckCircle2, AlertCircle } from 'lucide-react';
-import { supabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 // ─── Dynamic import ────────────────────────────────────────────────────────────
@@ -62,18 +62,6 @@ function ActiveScanner({ onScan, onStop }: { onScan: (code: string) => void; onS
 }
 
 function ScanResultCard({ result, onDismiss }: { result: ScanResult; onDismiss: () => void }) {
-  const [progress, setProgress] = useState(100);
-
-  useEffect(() => {
-    const start = Date.now();
-    const duration = 4000;
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - start;
-      setProgress(Math.max(0, 100 - (elapsed / duration) * 100));
-    }, 30);
-    return () => clearInterval(interval);
-  }, []);
-
   useEffect(() => {
     const timeout = setTimeout(onDismiss, 4000);
     return () => clearTimeout(timeout);
@@ -89,11 +77,6 @@ function ScanResultCard({ result, onDismiss }: { result: ScanResult; onDismiss: 
           : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
       }`}
     >
-      {/* Progress bar */}
-      <div
-        className="absolute bottom-0 left-0 h-1 bg-current opacity-20 transition-all duration-100 ease-linear"
-        style={{ width: `${progress}%` }}
-      />
       <div className="flex gap-3 items-start">
         {isSuccess ? (
           <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
@@ -138,15 +121,8 @@ function ScanResultCard({ result, onDismiss }: { result: ScanResult; onDismiss: 
 
 export default function ScannerPage() {
   const { scan, isScanning, scanResult, reset } = useScanner();
+  const { user } = useAuth();
   const [showScanner, setShowScanner] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-const supabase = supabaseClient;
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null);
-    });
-  }, []);
 
   const handleScan = useCallback(
     async (barcode: string) => {
@@ -157,7 +133,7 @@ const supabase = supabaseClient;
       try {
         const result = await scan({
           barcode,
-          soldBy: userId ?? undefined,
+          soldBy: user?.id,
         });
         if (result.success) {
           setShowScanner(false);
@@ -174,7 +150,7 @@ const supabase = supabaseClient;
         toast.error('Erreur inattendue lors du scan');
       }
     },
-    [scan, isScanning, userId]
+    [scan, isScanning, user?.id]
   );
 
   return (

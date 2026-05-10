@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Package, ScanLine, Receipt, MoreHorizontal,
   ClipboardList, BarChart3, Archive, Settings, LogOut,Users,
@@ -29,6 +29,7 @@ const moreNav = [
 
 export function MobileNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { logout, role, isLoading } = useAuth();
   const [open, setOpen] = useState(false);
 
@@ -38,8 +39,7 @@ export function MobileNav() {
   const handleLogout = async () => {
     setOpen(false);
     await logout();
-    // ✅ Hard navigation on logout
-    window.location.href = '/connexion';
+    router.replace('/connexion');
   };
 
   return (

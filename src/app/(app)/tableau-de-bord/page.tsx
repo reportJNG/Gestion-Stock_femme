@@ -112,7 +112,7 @@ export default function DashboardPage() {
               Bonjour
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Voici un aperçu de votre boutique aujourd'hui.
+              Voici un aperçu de votre boutique aujourd&apos;hui.
             </p>
           </div>
 

@@ -14,7 +14,6 @@ export function useNotifications() {
     retry: 1,
     retryDelay: 3000,
     staleTime: 1000 * 30,
-    refetchInterval: 30000,
     queryFn: async () => {
       const { count, error } = await withTimeout(
         supabase
@@ -32,7 +31,6 @@ export function useNotifications() {
     retry: 1,
     retryDelay: 3000,
     staleTime: 1000 * 30,
-    refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await withTimeout(
         supabase

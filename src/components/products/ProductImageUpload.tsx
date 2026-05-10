@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useRef } from 'react';
 import {  X, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -50,7 +51,7 @@ export function ProductImageUpload({ value, onChange, className }: ProductImageU
       <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
       {preview ? (
         <div className="relative aspect-square max-w-[200px] rounded-2xl overflow-hidden border border-rose-soft/20 shadow-sm">
-          <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+          <Image src={preview} alt="Preview" fill sizes="200px" className="object-cover" />
           <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-lg" onClick={remove}>
             <X className="h-4 w-4" />
           </Button>
