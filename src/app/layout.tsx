@@ -1,6 +1,12 @@
 import { Providers } from './providers';
 import './globals.css';
 
+export const metadata = {
+  icons: {
+    icon: '/images.png',
+  },
+};
+
 export default function RootLayout({
   children,
 }: {
