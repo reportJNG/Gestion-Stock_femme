@@ -15,8 +15,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LABEL_STYLES, generateLabelsGridHTML, type LabelData } from '@/lib/print/labelTemplate';
-import { openPrintWindow } from '@/lib/print/printService';
+import { createLabelStyles, generateLabelsGridHTML, type LabelData } from '@/lib/print/labelTemplate';
+import { printThermalLabel } from '@/lib/print/printService';
+import { DEFAULT_LABEL_SIZE_MM } from '@/lib/print/xprinter';
 import { cn } from '@/lib/utils';
 import { Barcode, Minus, Plus, Printer, Tag } from 'lucide-react';
 import { toast } from 'sonner';
@@ -98,7 +99,7 @@ export function ProductLabelsDialog({
     });
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (printableVariants.length === 0) {
       toast.warning('Aucun variant actif a imprimer');
       return;
@@ -123,14 +124,16 @@ export function ProductLabelsDialog({
       return Array.from({ length: count }, () => label);
     });
 
-    const closePrintWindow = openPrintWindow(generateLabelsGridHTML(labels), {
+    const result = await printThermalLabel({
       title: `Etiquettes - ${product.name}`,
-      withBarcodes: true,
-      extraStyles: LABEL_STYLES,
+      html: generateLabelsGridHTML(labels),
+      widthMm: DEFAULT_LABEL_SIZE_MM.width,
+      heightMm: DEFAULT_LABEL_SIZE_MM.height,
+      styles: createLabelStyles(DEFAULT_LABEL_SIZE_MM),
     });
 
-    if (!closePrintWindow) {
-      toast.error('Impossible d ouvrir la fenetre d impression');
+    if (!result.ok) {
+      toast.error(result.error);
       return;
     }
 

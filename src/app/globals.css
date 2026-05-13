@@ -338,19 +338,3 @@
     .no-print   { display: none; }
   }
 }
-
-/* ─── Barcode label print ─── */
-@media print {
-  @page { size: 50mm 30mm; margin: 0; }
-
-  body * { visibility: hidden; }
-
-  .print-area,
-  .print-area * { visibility: visible; }
-
-  .print-area {
-    position: absolute;
-    left: 0; top: 0;
-    width: 50mm; height: 30mm;
-  }
-}

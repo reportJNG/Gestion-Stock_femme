@@ -1,73 +1,141 @@
-const JSBARCODE_CDN = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
-
 export interface PrintOptions {
   title?: string;
-  /** Injecter JsBarcode et générer les barcodes Code128 après le rendu */
   withBarcodes?: boolean;
-  /** Délai (ms) avant window.print() — laisser le temps au SVG de se rendre */
   printDelay?: number;
   extraStyles?: string;
 }
 
-/**
- * Ouvre une fenêtre d'impression avec le contenu HTML fourni.
- *
- * Si `withBarcodes: true`, JsBarcode est chargé via CDN et tous les
- * éléments <svg id="bc-*"> sont convertis en Code128 avant l'impression.
- *
- * Retourne un callback pour fermer manuellement la fenêtre si besoin.
- */
+export type PrintResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export interface ThermalPrintOptions {
+  title?: string;
+  html: string;
+  widthMm: number;
+  heightMm: number;
+  styles?: string;
+  closeAfterPrint?: boolean;
+}
+
+function escapeTitle(title: string): string {
+  return title
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function waitForWindowLoad(printWindow: Window): Promise<void> {
+  return new Promise((resolve) => {
+    if (printWindow.document.readyState === 'complete') {
+      resolve();
+      return;
+    }
+
+    printWindow.addEventListener('load', () => resolve(), { once: true });
+  });
+}
+
+async function waitForPrintableAssets(printWindow: Window): Promise<void> {
+  await waitForWindowLoad(printWindow);
+
+  if (printWindow.document.fonts?.ready) {
+    await printWindow.document.fonts.ready;
+  }
+
+  const images = Array.from(printWindow.document.images);
+  await Promise.all(
+    images.map((image) => {
+      if (image.complete) return Promise.resolve();
+
+      return new Promise<void>((resolve) => {
+        image.addEventListener('load', () => resolve(), { once: true });
+        image.addEventListener('error', () => resolve(), { once: true });
+      });
+    })
+  );
+
+  await new Promise<void>((resolve) => {
+    printWindow.requestAnimationFrame(() => resolve());
+  });
+}
+
+export async function printThermalLabel({
+  title = 'Etiquettes',
+  html,
+  widthMm,
+  heightMm,
+  styles = '',
+  closeAfterPrint = true,
+}: ThermalPrintOptions): Promise<PrintResult> {
+  const printWindow = window.open('', '_blank');
+
+  if (!printWindow) {
+    return { ok: false, error: 'La fenetre d impression a ete bloquee par le navigateur.' };
+  }
+
+  try {
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>${escapeTitle(title)}</title>
+        <style>
+          @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
+          ${styles}
+        </style>
+      </head>
+      <body>${html}</body>
+      </html>
+    `);
+    printWindow.document.close();
+
+    await waitForPrintableAssets(printWindow);
+
+    if (closeAfterPrint) {
+      printWindow.onafterprint = () => printWindow.close();
+    }
+
+    printWindow.focus();
+    printWindow.print();
+
+    return { ok: true };
+  } catch (error) {
+    printWindow.close();
+
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Impossible de preparer l impression.',
+    };
+  }
+}
+
 export function openPrintWindow(
   htmlContent: string,
   options: PrintOptions = {},
 ): (() => void) | null {
   const {
-    title       = 'Impression',
-    withBarcodes = false,
-    printDelay   = withBarcodes ? 400 : 200,
-    extraStyles  = '',
+    title = 'Impression',
+    printDelay = 200,
+    extraStyles = '',
   } = options;
 
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    console.error('Impossible d\'ouvrir la fenêtre d\'impression — popups bloqués ?');
+    console.error('Impossible d ouvrir la fenetre d impression - popups bloques ?');
     return null;
   }
-
-  // Script JsBarcode + auto-scan de tous les SVG id="bc-*"
-  const barcodeScript = withBarcodes
-    ? `
-      <script src="${JSBARCODE_CDN}"><\/script>
-      <script>
-        function renderBarcodes() {
-          document.querySelectorAll('svg[id^="bc-"]').forEach(function(svg) {
-            var value = svg.getAttribute('data-barcode') || svg.id.replace('bc-', '');
-            try {
-              JsBarcode(svg, value, {
-                format:       'CODE128',
-                width:         1.4,
-                height:        38,
-                displayValue:  false,
-                margin:        0,
-                background:   '#ffffff',
-                lineColor:    '#000000',
-              });
-            } catch (e) {
-              svg.style.display = 'none';
-              console.warn('Barcode error for', value, e);
-            }
-          });
-        }
-      <\/script>`
-    : '';
 
   printWindow.document.write(`
     <!DOCTYPE html>
     <html lang="fr">
     <head>
       <meta charset="UTF-8" />
-      <title>${title}</title>
-      ${barcodeScript}
+      <title>${escapeTitle(title)}</title>
       <style>
         @page { margin: 0; }
         body  { margin: 0; padding: 0; }
@@ -78,7 +146,6 @@ export function openPrintWindow(
       ${htmlContent}
       <script>
         window.onload = function () {
-          ${withBarcodes ? 'renderBarcodes();' : ''}
           setTimeout(function () {
             window.print();
             window.onafterprint = function () { window.close(); };
