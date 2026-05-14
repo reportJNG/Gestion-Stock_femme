@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAppBarcode, normalizeScannedBarcode } from '@/lib/barcode/scan';
 import { supabaseClient } from '@/lib/supabase/client';
 
 
@@ -18,7 +19,7 @@ export type ScanResult = {
 };
 
 export function useScanner() {
-const supabase = supabaseClient;
+  const supabase = supabaseClient;
   const queryClient = useQueryClient();
 
   const scanMutation = useMutation({
@@ -31,8 +32,18 @@ const supabase = supabaseClient;
       customerName?: string;
       soldBy?: string;
     }): Promise<ScanResult> => {
+      const normalizedBarcode = normalizeScannedBarcode(barcode);
+
+      if (!isAppBarcode(normalizedBarcode)) {
+        return {
+          success: false,
+          error: 'CODE_BARRES_INVALIDE',
+          message: 'Code-barres invalide',
+        };
+      }
+
       const { data, error } = await supabase.rpc('sell_by_barcode', {
-        p_barcode: barcode,
+        p_barcode: normalizedBarcode,
         p_customer_name: customerName || null,
         p_sold_by: soldBy || null,
       });
@@ -43,8 +54,14 @@ const supabase = supabaseClient;
 
       return data as ScanResult;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.success) return;
+
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock-items'] });
+      queryClient.invalidateQueries({ queryKey: ['top-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product'] });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
     },
   });

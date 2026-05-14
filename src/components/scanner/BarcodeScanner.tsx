@@ -1,10 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Html5Qrcode, type CameraDevice } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats, type CameraDevice } from 'html5-qrcode';
+import { isAppBarcode, normalizeScannedBarcode } from '@/lib/barcode/scan';
 import { AlertCircle, CameraIcon, CameraOff, Loader2 } from 'lucide-react';
 
 type ScannerStatus = 'loading' | 'active' | 'error' | 'permission-denied';
+
+function getPreferredCamera(devices: CameraDevice[]): CameraDevice | undefined {
+  const backCamera = devices.find((device) =>
+    /back|rear|environment|arriere|arrière|camera2 0/i.test(device.label)
+  );
+
+  return backCamera || devices[devices.length - 1];
+}
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -68,7 +77,8 @@ export function BarcodeScanner({ onScan, onError, className }: BarcodeScannerPro
       if (!isMountedRef.current) return devices;
 
       setCameras(devices);
-      if (devices.length > 0) setCurrentCameraIfMounted(devices[0].id);
+      const preferredCamera = getPreferredCamera(devices);
+      if (preferredCamera) setCurrentCameraIfMounted(preferredCamera.id);
 
       return devices;
     } catch {
@@ -84,7 +94,10 @@ export function BarcodeScanner({ onScan, onError, className }: BarcodeScannerPro
       try {
         if (scannerRef.current) await stopScanner();
 
-        const scanner = new Html5Qrcode('scanner-reader');
+        const scanner = new Html5Qrcode('scanner-reader', {
+          formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128],
+          verbose: false,
+        });
         scannerRef.current = scanner;
 
         const targetCamera = cameraId || currentCameraRef.current;
@@ -94,23 +107,28 @@ export function BarcodeScanner({ onScan, onError, className }: BarcodeScannerPro
           {
             fps: 10,
             qrbox: (width: number, height: number) => {
-              const min = Math.min(width, height);
-              const size = Math.floor(min * 0.7);
-              return { width: size, height: size * 0.6 };
+              const scanWidth = Math.floor(Math.min(width * 0.9, height * 1.8));
+              const scanHeight = Math.floor(Math.min(height * 0.35, scanWidth * 0.35));
+              return {
+                width: Math.max(1, Math.min(width, scanWidth)),
+                height: Math.max(1, Math.min(height, scanHeight)),
+              };
             },
             aspectRatio: 1.777,
           },
           (decodedText) => {
-            if (lastScanRef.current === decodedText) return;
+            const barcode = normalizeScannedBarcode(decodedText);
+            if (!isAppBarcode(barcode)) return;
+            if (lastScanRef.current === barcode) return;
 
-            lastScanRef.current = decodedText;
+            lastScanRef.current = barcode;
             if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
 
             scanTimeoutRef.current = setTimeout(() => {
               lastScanRef.current = null;
             }, 2000);
 
-            onScanRef.current(decodedText);
+            onScanRef.current(barcode);
           },
           () => {}
         );
@@ -160,7 +178,7 @@ export function BarcodeScanner({ onScan, onError, className }: BarcodeScannerPro
     const init = async () => {
       const devices = await getCameras();
       if (!cancelled && devices.length > 0) {
-        await startScanner(devices[0].id);
+        await startScanner(getPreferredCamera(devices)?.id);
       }
     };
 

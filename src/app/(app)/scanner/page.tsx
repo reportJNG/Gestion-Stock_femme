@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useScanner, type ScanResult } from '@/hooks/useScanner';
 import { ManualBarcodeInput } from '@/components/scanner/ManualBarcodeInput';
 import { Button } from '@/components/ui/button';
+import { isAppBarcode, normalizeScannedBarcode } from '@/lib/barcode/scan';
 import { toast } from 'sonner';
 import { Camera, History, ScanLine, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -123,16 +124,26 @@ export default function ScannerPage() {
   const { scan, isScanning, scanResult, reset } = useScanner();
   const { user } = useAuth();
   const [showScanner, setShowScanner] = useState(false);
+  const scanInFlightRef = useRef(false);
 
   const handleScan = useCallback(
     async (barcode: string) => {
-      if (isScanning) {
+      const normalizedBarcode = normalizeScannedBarcode(barcode);
+
+      if (!isAppBarcode(normalizedBarcode)) {
+        toast.error('Code-barres invalide');
+        return;
+      }
+
+      if (scanInFlightRef.current || isScanning) {
         toast.info('Scan en cours, veuillez patienter...');
         return;
       }
+
+      scanInFlightRef.current = true;
       try {
         const result = await scan({
-          barcode,
+          barcode: normalizedBarcode,
           soldBy: user?.id,
         });
         if (result.success) {
@@ -148,6 +159,8 @@ export default function ScannerPage() {
       } catch (err) {
         console.error('[Scan] Error:', err);
         toast.error('Erreur inattendue lors du scan');
+      } finally {
+        scanInFlightRef.current = false;
       }
     },
     [scan, isScanning, user?.id]
