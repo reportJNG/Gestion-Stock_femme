@@ -7,6 +7,7 @@ import { supabaseClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ProductImageUpload } from '@/components/products/ProductImageUpload';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -53,6 +54,7 @@ export function EditProductClient() {
   const [costPrice, setCostPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [tvaRate, setTvaRate] = useState('19');
+  const [imageUrl, setImageUrl] = useState('');
 
   useEffect(() => {
     if (data?.data?.product) {
@@ -63,6 +65,7 @@ export function EditProductClient() {
       setCostPrice(String(p.cost_price));
       setSalePrice(String(p.sale_price));
       setTvaRate(String(p.tva_rate));
+      setImageUrl(p.image_url || '');
     }
   }, [data]);
 
@@ -77,6 +80,7 @@ export function EditProductClient() {
           cost_price: parseFloat(costPrice) || 0,
           sale_price: parseFloat(salePrice) || 0,
           tva_rate: parseFloat(tvaRate) || 19,
+          image_url: imageUrl || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', productId)
@@ -195,6 +199,11 @@ export function EditProductClient() {
           <div className="px-4 py-2 rounded-xl bg-rose-light/20 text-sm text-muted-foreground">
             <span className="font-medium">Catégorie :</span> {product?.category?.name_fr}{' '}
             <span className="text-xs">(verrouillée – les codes‑barres en dépendent)</span>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Photo du produit</Label>
+            <ProductImageUpload value={imageUrl} onChange={setImageUrl} />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
